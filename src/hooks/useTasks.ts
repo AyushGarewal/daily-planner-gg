@@ -1,6 +1,7 @@
 
 import { useLocalStorage } from './useLocalStorage';
 import { Task, UserProgress, XP_PER_LEVEL } from '../types/task';
+import { useAchievements } from './useAchievements';
 
 export function useTasks() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', []);
@@ -10,6 +11,8 @@ export function useTasks() {
     currentStreak: 0,
     maxStreak: 0,
   });
+
+  const { userStats, useStreakShield } = useAchievements();
 
   const addTask = (task: Omit<Task, 'id' | 'completed'>) => {
     const newTask: Task = {
@@ -37,7 +40,7 @@ export function useTasks() {
     const completedAt = new Date();
     updateTask(id, { completed: true, completedAt });
 
-    // Update progress
+    // Update progress with streak shield logic
     setProgress(prev => {
       const newTotalXP = prev.totalXP + task.xpValue;
       const newLevel = Math.floor(newTotalXP / XP_PER_LEVEL) + 1;
@@ -56,7 +59,12 @@ export function useTasks() {
         } else if (lastCompletionDate === today) {
           newStreak = prev.currentStreak;
         } else {
-          newStreak = 1;
+          // Streak would break - check for streak shield
+          if (useStreakShield()) {
+            newStreak = prev.currentStreak; // Keep streak with shield
+          } else {
+            newStreak = 1;
+          }
         }
       }
 
@@ -87,7 +95,7 @@ export function useTasks() {
   };
 
   const getTodayCompletionPercentage = () => {
-    const todaysTasks = getTodaysNormalTasks(); // Only count normal tasks for completion percentage
+    const todaysTasks = getTodaysNormalTasks();
     if (todaysTasks.length === 0) return 0;
     const completedCount = todaysTasks.filter(task => task.completed).length;
     return Math.round((completedCount / todaysTasks.length) * 100);
@@ -107,6 +115,36 @@ export function useTasks() {
     return normalTasks;
   };
 
+  const getTasksForDate = (date: Date) => {
+    const dateStr = date.toDateString();
+    return tasks.filter(task => new Date(task.dueDate).toDateString() === dateStr);
+  };
+
+  const filterTasks = (filters: { category?: string; priority?: string; completed?: boolean }) => {
+    return tasks.filter(task => {
+      if (filters.category && task.category !== filters.category) return false;
+      if (filters.priority && task.priority !== filters.priority) return false;
+      if (filters.completed !== undefined && task.completed !== filters.completed) return false;
+      return true;
+    });
+  };
+
+  const sortTasks = (sortBy: 'dueDate' | 'xpValue' | 'priority') => {
+    return [...tasks].sort((a, b) => {
+      switch (sortBy) {
+        case 'dueDate':
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'xpValue':
+          return b.xpValue - a.xpValue;
+        case 'priority':
+          const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        default:
+          return 0;
+      }
+    });
+  };
+
   return {
     tasks,
     progress,
@@ -120,5 +158,8 @@ export function useTasks() {
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,
     getVisibleTodaysTasks,
+    getTasksForDate,
+    filterTasks,
+    sortTasks,
   };
 }
