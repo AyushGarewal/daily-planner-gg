@@ -1,13 +1,15 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, List } from 'lucide-react';
+import { Plus, Calendar, List, BarChart3, Heart } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 import { TaskForm } from '../components/TaskForm';
 import { TaskCard } from '../components/TaskCard';
 import { ProgressTracker } from '../components/ProgressTracker';
+import { MoodTracker } from '../components/MoodTracker';
+import { JournalPrompt } from '../components/JournalPrompt';
+import { ProductivityChart } from '../components/ProductivityChart';
 import { Task } from '../types/task';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 
@@ -20,7 +22,9 @@ const Index = () => {
     deleteTask, 
     completeTask, 
     getTodaysTasks, 
-    getTodayCompletionPercentage 
+    getTodayCompletionPercentage,
+    shouldShowSurplusTasks,
+    getVisibleTodaysTasks
   } = useTasks();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -39,7 +43,7 @@ const Index = () => {
     }
   };
 
-  const todaysTasks = getTodaysTasks();
+  const visibleTodaysTasks = getVisibleTodaysTasks();
   const todayCompletionPercentage = getTodayCompletionPercentage();
 
   // Get this week's days for weekly view
@@ -92,7 +96,7 @@ const Index = () => {
 
         {/* Task Views */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="today" className="gap-2">
               <List className="h-4 w-4" />
               Today
@@ -100,6 +104,10 @@ const Index = () => {
             <TabsTrigger value="week" className="gap-2">
               <Calendar className="h-4 w-4" />
               This Week
+            </TabsTrigger>
+            <TabsTrigger value="wellness" className="gap-2">
+              <Heart className="h-4 w-4" />
+              Wellness
             </TabsTrigger>
             <TabsTrigger value="all" className="gap-2">
               <List className="h-4 w-4" />
@@ -109,14 +117,22 @@ const Index = () => {
 
           <TabsContent value="today" className="mt-6">
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Today's Tasks ({todaysTasks.length})</h2>
-              {todaysTasks.length === 0 ? (
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Today's Tasks ({visibleTodaysTasks.length})</h2>
+                {shouldShowSurplusTasks() && (
+                  <div className="text-sm text-purple-600 font-medium">
+                    🎉 Surplus tasks unlocked!
+                  </div>
+                )}
+              </div>
+              
+              {visibleTodaysTasks.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No tasks for today. Add some tasks to get started!</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {todaysTasks.map((task) => (
+                  {visibleTodaysTasks.map((task) => (
                     <TaskCard
                       key={task.id}
                       task={task}
@@ -165,6 +181,19 @@ const Index = () => {
                   );
                 })}
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="wellness" className="mt-6">
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold">Wellness & Insights</h2>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <MoodTracker />
+                <JournalPrompt />
+              </div>
+              
+              <ProductivityChart />
             </div>
           </TabsContent>
 

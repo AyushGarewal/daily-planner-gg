@@ -78,11 +78,33 @@ export function useTasks() {
     });
   };
 
+  const getTodaysNormalTasks = () => {
+    return getTodaysTasks().filter(task => task.taskType === 'normal');
+  };
+
+  const getTodaysSurplusTasks = () => {
+    return getTodaysTasks().filter(task => task.taskType === 'surplus');
+  };
+
   const getTodayCompletionPercentage = () => {
-    const todaysTasks = getTodaysTasks();
+    const todaysTasks = getTodaysNormalTasks(); // Only count normal tasks for completion percentage
     if (todaysTasks.length === 0) return 0;
     const completedCount = todaysTasks.filter(task => task.completed).length;
     return Math.round((completedCount / todaysTasks.length) * 100);
+  };
+
+  const shouldShowSurplusTasks = () => {
+    return getTodayCompletionPercentage() >= 80;
+  };
+
+  const getVisibleTodaysTasks = () => {
+    const normalTasks = getTodaysNormalTasks();
+    const surplusTasks = getTodaysSurplusTasks();
+    
+    if (shouldShowSurplusTasks()) {
+      return [...normalTasks, ...surplusTasks];
+    }
+    return normalTasks;
   };
 
   return {
@@ -93,6 +115,10 @@ export function useTasks() {
     deleteTask,
     completeTask,
     getTodaysTasks,
+    getTodaysNormalTasks,
+    getTodaysSurplusTasks,
     getTodayCompletionPercentage,
+    shouldShowSurplusTasks,
+    getVisibleTodaysTasks,
   };
 }

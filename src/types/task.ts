@@ -1,4 +1,3 @@
-
 export interface Task {
   id: string;
   title: string;
@@ -11,6 +10,7 @@ export interface Task {
   category: string;
   completed: boolean;
   completedAt?: Date;
+  taskType: 'normal' | 'surplus';
 }
 
 export interface Subtask {

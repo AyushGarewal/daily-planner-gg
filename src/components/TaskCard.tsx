@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Edit, Trash2, Star } from 'lucide-react';
+import { Calendar, Edit, Trash2, Star, Gift } from 'lucide-react';
 import { format } from 'date-fns';
 import { Task } from '../types/task';
 
@@ -27,7 +27,7 @@ export function TaskCard({ task, onComplete, onEdit, onDelete }: TaskCardProps) 
   };
 
   return (
-    <Card className={`transition-all duration-200 ${task.completed ? 'opacity-70' : 'hover:shadow-md'}`}>
+    <Card className={`transition-all duration-200 ${task.completed ? 'opacity-70' : 'hover:shadow-md'} ${task.taskType === 'surplus' ? 'border-purple-200 bg-purple-50/50' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -37,8 +37,11 @@ export function TaskCard({ task, onComplete, onEdit, onDelete }: TaskCardProps) 
               className="mt-1"
             />
             <div className="flex-1">
-              <CardTitle className={`text-lg ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+              <CardTitle className={`text-lg flex items-center gap-2 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
                 {task.title}
+                {task.taskType === 'surplus' && (
+                  <Gift className="h-4 w-4 text-purple-500" />
+                )}
               </CardTitle>
               {task.description && (
                 <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
@@ -79,6 +82,11 @@ export function TaskCard({ task, onComplete, onEdit, onDelete }: TaskCardProps) 
               <Badge variant="secondary">{task.category}</Badge>
               {task.recurrence !== 'None' && (
                 <Badge variant="outline">{task.recurrence}</Badge>
+              )}
+              {task.taskType === 'surplus' && (
+                <Badge variant="outline" className="text-purple-600 border-purple-300">
+                  Surplus
+                </Badge>
               )}
             </div>
             
