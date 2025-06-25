@@ -26,6 +26,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask }: TaskFormProps) {
   const [recurrence, setRecurrence] = useState<'None' | 'Daily' | 'Weekly' | 'Monthly'>(initialTask?.recurrence || 'None');
   const [xpValue, setXpValue] = useState(initialTask?.xpValue || 10);
   const [category, setCategory] = useState(initialTask?.category || 'Personal');
+  const [taskType, setTaskType] = useState<'normal' | 'surplus'>(initialTask?.taskType || 'normal');
   const [newSubtask, setNewSubtask] = useState('');
 
   const addSubtask = () => {
@@ -56,6 +57,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask }: TaskFormProps) {
       recurrence,
       xpValue,
       category,
+      taskType,
     });
   };
 
@@ -181,18 +183,33 @@ export function TaskForm({ onSubmit, onCancel, initialTask }: TaskFormProps) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Category</label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Task Type</label>
+          <Select value={taskType} onValueChange={(value: 'normal' | 'surplus') => setTaskType(value)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="surplus">Surplus</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex gap-2 pt-4">
