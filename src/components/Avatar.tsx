@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -34,10 +33,11 @@ export function Avatar({ progress, size = 'small', showDetails = false }: Avatar
   };
 
   // Determine mood based on streak and recent activity
-  const getCurrentMood = () => {
+  const getCurrentMood = (): 'happy' | 'neutral' | 'sad' | 'tired' => {
     if (progress.currentStreak >= 7) return 'happy';
     if (progress.currentStreak >= 3) return 'neutral';
     if (progress.currentStreak === 0) return 'sad';
+    if (avatarData.energy < 30) return 'tired';
     return 'neutral';
   };
 
