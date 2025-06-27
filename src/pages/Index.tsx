@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User, Menu } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 import { useAchievements } from '../hooks/useAchievements';
 import { TaskForm } from '../components/TaskForm';
@@ -16,6 +17,10 @@ import { PowerUpManager } from '../components/PowerUpManager';
 import { SpinWheel } from '../components/SpinWheel';
 import { AchievementNotification } from '../components/AchievementNotification';
 import { TaskFilters } from '../components/TaskFilters';
+import { AppSidebar } from '../components/AppSidebar';
+import { Avatar } from '../components/Avatar';
+import { XPBar } from '../components/XPBar';
+import { AvatarScreen } from '../components/AvatarScreen';
 import { Task } from '../types/task';
 import { Achievement, SpinReward } from '../types/achievements';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
@@ -166,242 +171,229 @@ const Index = () => {
   const availableThemes = THEMES.filter(theme => theme.unlockLevel <= progress.level);
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
-      <div className="container mx-auto p-4 max-w-6xl">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Task Planner</h1>
-            <p className="text-muted-foreground">Stay productive and build great habits</p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                const newTheme = isDarkMode ? 'light' : 'dark';
-                setIsDarkMode(!isDarkMode);
-                setTheme(newTheme);
-              }}
-            >
-              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-
-            {/* Streak Shield Counter */}
-            {userStats.streakShields > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-md">
-                <span className="text-sm">🛡️ {userStats.streakShields}</span>
+    <SidebarProvider>
+      <div className="min-h-screen bg-background transition-colors duration-300 flex w-full">
+        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger />
+                <div className="hidden sm:block">
+                  <h1 className="text-2xl font-bold">Task Planner</h1>
+                  <p className="text-sm text-muted-foreground">Stay productive and build great habits</p>
+                </div>
               </div>
-            )}
-            
-            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Task
+              
+              <div className="flex items-center gap-3">
+                {/* Avatar Widget */}
+                <Avatar progress={progress} size="small" showDetails={false} />
+                
+                {/* Theme Toggle */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const newTheme = isDarkMode ? 'light' : 'dark';
+                    setIsDarkMode(!isDarkMode);
+                    setTheme(newTheme);
+                  }}
+                >
+                  {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Add New Task</DialogTitle>
-                </DialogHeader>
-                <TaskForm
-                  onSubmit={handleAddTask}
-                  onCancel={() => setIsFormOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
 
-        {/* Progress Tracker */}
-        <div className="mb-6">
-          <ProgressTracker 
-            progress={progress} 
-            todayCompletionPercentage={todayCompletionPercentage} 
-          />
-        </div>
+                {/* Streak Shield Counter */}
+                {userStats.streakShields > 0 && (
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-md">
+                    <span className="text-sm">🛡️ {userStats.streakShields}</span>
+                  </div>
+                )}
+                
+                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden sm:inline">Add Task</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Add New Task</DialogTitle>
+                    </DialogHeader>
+                    <TaskForm
+                      onSubmit={handleAddTask}
+                      onCancel={() => setIsFormOpen(false)}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </header>
 
-        {/* Task Views */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="today" className="gap-2">
-              <List className="h-4 w-4" />
-              Today
-            </TabsTrigger>
-            <TabsTrigger value="week" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Week
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="gap-2">
-              <User className="h-4 w-4" />
-              Profile
-            </TabsTrigger>
-            <TabsTrigger value="trophies" className="gap-2">
-              <Trophy className="h-4 w-4" />
-              Trophies
-            </TabsTrigger>
-            <TabsTrigger value="custom-trophies" className="gap-2">
-              <Trophy className="h-4 w-4" />
-              Custom
-            </TabsTrigger>
-            <TabsTrigger value="powerups" className="gap-2">
-              <Zap className="h-4 w-4" />
-              Power-Ups
-            </TabsTrigger>
-            <TabsTrigger value="wellness" className="gap-2">
-              <Heart className="h-4 w-4" />
-              Wellness
-            </TabsTrigger>
-            <TabsTrigger value="all" className="gap-2">
-              <List className="h-4 w-4" />
-              All Tasks
-            </TabsTrigger>
-          </TabsList>
+          {/* Main Content */}
+          <main className="flex-1 container mx-auto p-4 max-w-6xl">
+            {/* XP Bar */}
+            <div className="mb-6">
+              <XPBar progress={progress} />
+            </div>
 
-          <TabsContent value="today" className="mt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Today's Tasks ({visibleTodaysTasks.length})</h2>
-                {shouldShowSurplusTasks() && (
-                  <div className="text-sm text-purple-600 font-medium">
-                    🎉 Surplus tasks unlocked!
+            {/* Progress Tracker */}
+            <div className="mb-6">
+              <ProgressTracker 
+                progress={progress} 
+                todayCompletionPercentage={todayCompletionPercentage} 
+              />
+            </div>
+
+            {/* Content based on active tab */}
+            {activeTab === 'today' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Today's Tasks ({visibleTodaysTasks.length})</h2>
+                  {shouldShowSurplusTasks() && (
+                    <div className="text-sm text-purple-600 font-medium">
+                      🎉 Surplus tasks unlocked!
+                    </div>
+                  )}
+                </div>
+                
+                {visibleTodaysTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No tasks for today. Add some tasks to get started!</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {visibleTodaysTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onComplete={handleCompleteTask}
+                        onEdit={setEditingTask}
+                        onDelete={deleteTask}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
-              
-              {visibleTodaysTasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No tasks for today. Add some tasks to get started!</p>
-                </div>
-              ) : (
+            )}
+
+            {activeTab === 'week' && (
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">This Week</h2>
                 <div className="grid gap-4">
-                  {visibleTodaysTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onComplete={handleCompleteTask}
-                      onEdit={setEditingTask}
-                      onDelete={deleteTask}
-                    />
-                  ))}
+                  {weekDays.map((day) => {
+                    const dayTasks = getTasksForDate(day);
+                    const isToday = day.toDateString() === today.toDateString();
+                    
+                    return (
+                      <div key={day.toISOString()} className={`p-4 rounded-lg border ${isToday ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                        <h3 className="font-medium mb-3 flex items-center gap-2">
+                          {format(day, 'EEEE, MMM dd')}
+                          {isToday && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Today</span>}
+                          <span className="text-sm text-muted-foreground">({dayTasks.length} tasks)</span>
+                        </h3>
+                        
+                        {dayTasks.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No tasks scheduled</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {dayTasks.map((task) => (
+                              <TaskCard
+                                key={task.id}
+                                task={task}
+                                onComplete={handleCompleteTask}
+                                onEdit={setEditingTask}
+                                onDelete={deleteTask}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="week" className="mt-6">
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">This Week</h2>
-              <div className="grid gap-4">
-                {weekDays.map((day) => {
-                  const dayTasks = getTasksForDate(day);
-                  const isToday = day.toDateString() === today.toDateString();
-                  
-                  return (
-                    <div key={day.toISOString()} className={`p-4 rounded-lg border ${isToday ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                      <h3 className="font-medium mb-3 flex items-center gap-2">
-                        {format(day, 'EEEE, MMM dd')}
-                        {isToday && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Today</span>}
-                        <span className="text-sm text-muted-foreground">({dayTasks.length} tasks)</span>
-                      </h3>
-                      
-                      {dayTasks.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No tasks scheduled</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {dayTasks.map((task) => (
-                            <TaskCard
-                              key={task.id}
-                              task={task}
-                              onComplete={handleCompleteTask}
-                              onEdit={setEditingTask}
-                              onDelete={deleteTask}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
               </div>
-            </div>
-          </TabsContent>
+            )}
 
-          <TabsContent value="profile" className="mt-6">
-            <div className="space-y-6">
-              <Profile progress={progress} userStats={userStats} />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <HabitHeatmap />
-                <WeeklyPerformanceTracker />
+            {activeTab === 'profile' && (
+              <div className="space-y-6">
+                <Profile progress={progress} userStats={userStats} />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <HabitHeatmap />
+                  <WeeklyPerformanceTracker />
+                </div>
               </div>
-            </div>
-          </TabsContent>
+            )}
 
-          <TabsContent value="trophies" className="mt-6">
-            <TrophyRoom achievements={userStats.achievements} />
-          </TabsContent>
+            {activeTab === 'avatar' && (
+              <AvatarScreen progress={progress} />
+            )}
 
-          <TabsContent value="custom-trophies" className="mt-6">
-            <CustomTrophyManager onTrophyCheck={() => []} />
-          </TabsContent>
+            {activeTab === 'trophies' && (
+              <TrophyRoom achievements={userStats.achievements} />
+            )}
 
-          <TabsContent value="powerups" className="mt-6">
-            <PowerUpManager 
-              powerUps={userStats.powerUps} 
-              onUsePowerUp={handleUsePowerUp} 
-            />
-          </TabsContent>
+            {activeTab === 'custom-trophies' && (
+              <CustomTrophyManager onTrophyCheck={() => []} />
+            )}
 
-          <TabsContent value="wellness" className="mt-6">
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Wellness & Insights</h2>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <MoodTracker />
-                <JournalPrompt />
-              </div>
-              
-              <ProductivityChart />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="all" className="mt-6">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">All Tasks ({tasks.length})</h2>
-              </div>
-              
-              <TaskFilters
-                filters={filters}
-                sortBy={sortBy}
-                onFilterChange={setFilters}
-                onSortChange={setSortBy}
-                onClearFilters={() => setFilters({})}
+            {activeTab === 'powerups' && (
+              <PowerUpManager 
+                powerUps={userStats.powerUps} 
+                onUsePowerUp={handleUsePowerUp} 
               />
-              
-              {finalTasks.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No tasks match your current filters.</p>
+            )}
+
+            {activeTab === 'wellness' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold">Wellness & Insights</h2>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <MoodTracker />
+                  <JournalPrompt />
                 </div>
-              ) : (
-                <div className="grid gap-4">
-                  {finalTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      onComplete={handleCompleteTask}
-                      onEdit={setEditingTask}
-                      onDelete={deleteTask}
-                    />
-                  ))}
+                
+                <ProductivityChart />
+              </div>
+            )}
+
+            {activeTab === 'all' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">All Tasks ({tasks.length})</h2>
                 </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+                
+                <TaskFilters
+                  filters={filters}
+                  sortBy={sortBy}
+                  onFilterChange={setFilters}
+                  onSortChange={setSortBy}
+                  onClearFilters={() => setFilters({})}
+                />
+                
+                {finalTasks.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No tasks match your current filters.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {finalTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onComplete={handleCompleteTask}
+                        onEdit={setEditingTask}
+                        onDelete={deleteTask}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
 
         {/* Edit Task Dialog */}
         <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
@@ -435,7 +427,7 @@ const Index = () => {
           />
         )}
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
