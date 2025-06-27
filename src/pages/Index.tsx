@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User, Menu } from 'lucide-react';
+import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User, Menu, Palette } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 import { useAchievements } from '../hooks/useAchievements';
 import { TaskForm } from '../components/TaskForm';
@@ -21,6 +21,8 @@ import { AppSidebar } from '../components/AppSidebar';
 import { Avatar } from '../components/Avatar';
 import { XPBar } from '../components/XPBar';
 import { AvatarScreen } from '../components/AvatarScreen';
+import { SpinWheelCenter } from '../components/SpinWheelCenter';
+import { ThemeSelector } from '../components/ThemeSelector';
 import { Task } from '../types/task';
 import { Achievement, SpinReward } from '../types/achievements';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
@@ -29,6 +31,7 @@ import { Profile } from '../components/Profile';
 import { CustomTrophyManager } from '../components/CustomTrophyManager';
 import { WeeklyPerformanceTracker } from '../components/WeeklyPerformanceTracker';
 import { HabitHeatmap } from '../components/HabitHeatmap';
+import { useIsMobile } from '../hooks/use-mobile';
 
 const Index = () => {
   const { 
@@ -64,6 +67,9 @@ const Index = () => {
   const [showSpinWheel, setShowSpinWheel] = useState(false);
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState('light');
+  
+  const isMobile = useIsMobile();
   
   // Filter and sort states with proper typing
   const [filters, setFilters] = useState<{
@@ -84,12 +90,38 @@ const Index = () => {
   // Apply theme
   useEffect(() => {
     const root = document.documentElement;
-    if (userStats.theme === 'dark' || isDarkMode) {
+    const savedTheme = localStorage.getItem('app-theme') || 'light';
+    setCurrentTheme(savedTheme);
+    
+    if (savedTheme === 'dark' || isDarkMode) {
       root.classList.add('dark');
-    } else {
+      root.classList.remove('vibrant');
+    } else if (savedTheme === 'vibrant') {
+      root.classList.add('vibrant');
       root.classList.remove('dark');
+    } else {
+      root.classList.remove('dark', 'vibrant');
     }
-  }, [userStats.theme, isDarkMode]);
+  }, [userStats.theme, isDarkMode, currentTheme]);
+
+  const handleThemeChange = (theme: string) => {
+    setCurrentTheme(theme);
+    localStorage.setItem('app-theme', theme);
+    setTheme(theme);
+    
+    const root = document.documentElement;
+    root.classList.remove('dark', 'vibrant');
+    
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      setIsDarkMode(true);
+    } else if (theme === 'vibrant') {
+      root.classList.add('vibrant');
+      setIsDarkMode(false);
+    } else {
+      setIsDarkMode(false);
+    }
+  };
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     addTask(taskData);
@@ -106,7 +138,6 @@ const Index = () => {
   const handleCompleteTask = (id: string) => {
     completeTask(id);
     
-    // Check if user can spin after completing task
     const completionPercentage = getTodayCompletionPercentage();
     if (completionPercentage === 100 && canSpin()) {
       setTimeout(() => setShowSpinWheel(true), 1000);
@@ -175,50 +206,45 @@ const Index = () => {
       <div className="min-h-screen bg-background transition-colors duration-300 flex w-full">
         <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
         
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger />
-                <div className="hidden sm:block">
-                  <h1 className="text-2xl font-bold">Task Planner</h1>
-                  <p className="text-sm text-muted-foreground">Stay productive and build great habits</p>
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Enhanced Header */}
+          <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
+            <div className="flex items-center justify-between p-3 sm:p-4 gap-2">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                <SidebarTrigger className="shrink-0" />
+                <div className="hidden sm:block min-w-0">
+                  <h1 className="text-lg sm:text-2xl font-bold truncate">Task Planner</h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Stay productive and build great habits</p>
+                </div>
+                <div className="sm:hidden">
+                  <h1 className="text-base font-bold">Tasks</h1>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 {/* Avatar Widget */}
-                <Avatar progress={progress} size="small" showDetails={false} />
+                <div className="hidden sm:block">
+                  <Avatar progress={progress} size="small" showDetails={false} />
+                </div>
                 
                 {/* Theme Toggle */}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => {
-                    const newTheme = isDarkMode ? 'light' : 'dark';
-                    setIsDarkMode(!isDarkMode);
-                    setTheme(newTheme);
-                  }}
-                >
-                  {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </Button>
-
+                <ThemeSelector currentTheme={currentTheme} onThemeChange={handleThemeChange} />
+                
                 {/* Streak Shield Counter */}
                 {userStats.streakShields > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 rounded-md">
-                    <span className="text-sm">🛡️ {userStats.streakShields}</span>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 rounded-md">
+                    <span className="text-xs sm:text-sm">🛡️ {userStats.streakShields}</span>
                   </div>
                 )}
                 
                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                   <DialogTrigger asChild>
-                    <Button className="gap-2">
+                    <Button className="gap-2 min-h-[44px]" size={isMobile ? "sm" : "default"}>
                       <Plus className="h-4 w-4" />
                       <span className="hidden sm:inline">Add Task</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4">
                     <DialogHeader>
                       <DialogTitle>Add New Task</DialogTitle>
                     </DialogHeader>
@@ -233,14 +259,14 @@ const Index = () => {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 container mx-auto p-4 max-w-6xl">
+          <main className="flex-1 container mx-auto p-3 sm:p-4 max-w-6xl">
             {/* XP Bar */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <XPBar progress={progress} />
             </div>
 
             {/* Progress Tracker */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <ProgressTracker 
                 progress={progress} 
                 todayCompletionPercentage={todayCompletionPercentage} 
@@ -249,11 +275,11 @@ const Index = () => {
 
             {/* Content based on active tab */}
             {activeTab === 'today' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Today's Tasks ({visibleTodaysTasks.length})</h2>
+              <div className="space-y-4 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <h2 className="text-lg sm:text-xl font-semibold">Today's Tasks ({visibleTodaysTasks.length})</h2>
                   {shouldShowSurplusTasks() && (
-                    <div className="text-sm text-purple-600 font-medium">
+                    <div className="text-sm text-purple-600 font-medium animate-pulse">
                       🎉 Surplus tasks unlocked!
                     </div>
                   )}
@@ -264,15 +290,16 @@ const Index = () => {
                     <p>No tasks for today. Add some tasks to get started!</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="grid gap-3 sm:gap-4">
                     {visibleTodaysTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onComplete={handleCompleteTask}
-                        onEdit={setEditingTask}
-                        onDelete={deleteTask}
-                      />
+                      <div key={task.id} className="transform transition-all duration-200 hover:scale-[1.01]">
+                        <TaskCard
+                          task={task}
+                          onComplete={handleCompleteTask}
+                          onEdit={setEditingTask}
+                          onDelete={deleteTask}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -280,19 +307,21 @@ const Index = () => {
             )}
 
             {activeTab === 'week' && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">This Week</h2>
-                <div className="grid gap-4">
+              <div className="space-y-4 animate-fade-in">
+                <h2 className="text-lg sm:text-xl font-semibold">This Week</h2>
+                <div className="grid gap-3 sm:gap-4">
                   {weekDays.map((day) => {
                     const dayTasks = getTasksForDate(day);
                     const isToday = day.toDateString() === today.toDateString();
                     
                     return (
-                      <div key={day.toISOString()} className={`p-4 rounded-lg border ${isToday ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                        <h3 className="font-medium mb-3 flex items-center gap-2">
-                          {format(day, 'EEEE, MMM dd')}
-                          {isToday && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Today</span>}
-                          <span className="text-sm text-muted-foreground">({dayTasks.length} tasks)</span>
+                      <div key={day.toISOString()} className={`p-3 sm:p-4 rounded-lg border transition-colors ${isToday ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:bg-muted/30'}`}>
+                        <h3 className="font-medium mb-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span className="text-sm sm:text-base">{format(day, 'EEEE, MMM dd')}</span>
+                          <div className="flex items-center gap-2">
+                            {isToday && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Today</span>}
+                            <span className="text-xs sm:text-sm text-muted-foreground">({dayTasks.length} tasks)</span>
+                          </div>
                         </h3>
                         
                         {dayTasks.length === 0 ? (
@@ -317,10 +346,18 @@ const Index = () => {
               </div>
             )}
 
+            {activeTab === 'spin-wheel' && (
+              <SpinWheelCenter 
+                canSpin={canSpin}
+                todayCompletionPercentage={todayCompletionPercentage}
+                onSpin={() => setShowSpinWheel(true)}
+              />
+            )}
+
             {activeTab === 'profile' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <Profile progress={progress} userStats={userStats} />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <HabitHeatmap />
                   <WeeklyPerformanceTracker />
                 </div>
@@ -328,29 +365,37 @@ const Index = () => {
             )}
 
             {activeTab === 'avatar' && (
-              <AvatarScreen progress={progress} />
+              <div className="animate-fade-in">
+                <AvatarScreen progress={progress} />
+              </div>
             )}
 
             {activeTab === 'trophies' && (
-              <TrophyRoom achievements={userStats.achievements} />
+              <div className="animate-fade-in">
+                <TrophyRoom achievements={userStats.achievements} />
+              </div>
             )}
 
             {activeTab === 'custom-trophies' && (
-              <CustomTrophyManager onTrophyCheck={() => []} />
+              <div className="animate-fade-in">
+                <CustomTrophyManager onTrophyCheck={() => []} />
+              </div>
             )}
 
             {activeTab === 'powerups' && (
-              <PowerUpManager 
-                powerUps={userStats.powerUps} 
-                onUsePowerUp={handleUsePowerUp} 
-              />
+              <div className="animate-fade-in">
+                <PowerUpManager 
+                  powerUps={userStats.powerUps} 
+                  onUsePowerUp={handleUsePowerUp} 
+                />
+              </div>
             )}
 
             {activeTab === 'wellness' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-semibold">Wellness & Insights</h2>
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
+                <h2 className="text-lg sm:text-xl font-semibold">Wellness & Insights</h2>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <MoodTracker />
                   <JournalPrompt />
                 </div>
@@ -360,9 +405,9 @@ const Index = () => {
             )}
 
             {activeTab === 'all' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">All Tasks ({tasks.length})</h2>
+              <div className="space-y-4 sm:space-y-6 animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <h2 className="text-lg sm:text-xl font-semibold">All Tasks ({tasks.length})</h2>
                 </div>
                 
                 <TaskFilters
@@ -378,15 +423,16 @@ const Index = () => {
                     <p>No tasks match your current filters.</p>
                   </div>
                 ) : (
-                  <div className="grid gap-4">
+                  <div className="grid gap-3 sm:gap-4">
                     {finalTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onComplete={handleCompleteTask}
-                        onEdit={setEditingTask}
-                        onDelete={deleteTask}
-                      />
+                      <div key={task.id} className="transform transition-all duration-200 hover:scale-[1.01]">
+                        <TaskCard
+                          task={task}
+                          onComplete={handleCompleteTask}
+                          onEdit={setEditingTask}
+                          onDelete={deleteTask}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -397,7 +443,7 @@ const Index = () => {
 
         {/* Edit Task Dialog */}
         <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
               <DialogTitle>Edit Task</DialogTitle>
             </DialogHeader>
