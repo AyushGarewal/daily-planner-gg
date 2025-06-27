@@ -12,9 +12,9 @@ interface TaskFiltersProps {
     priority?: string;
     completed?: boolean;
   };
-  sortBy: string;
+  sortBy: 'dueDate' | 'xpValue' | 'priority';
   onFilterChange: (filters: any) => void;
-  onSortChange: (sortBy: string) => void;
+  onSortChange: (sortBy: 'dueDate' | 'xpValue' | 'priority') => void;
   onClearFilters: () => void;
 }
 
@@ -93,7 +93,10 @@ export function TaskFilters({
           </SelectContent>
         </Select>
 
-        <Select value={sortBy} onValueChange={onSortChange}>
+        <Select 
+          value={sortBy} 
+          onValueChange={(value) => onSortChange(value as 'dueDate' | 'xpValue' | 'priority')}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
