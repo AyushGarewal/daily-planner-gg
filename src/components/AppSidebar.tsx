@@ -21,7 +21,8 @@ import {
   Gift, 
   Target,
   BarChart3,
-  Sparkles
+  Sparkles,
+  TrendingUp
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -33,6 +34,7 @@ const navigationItems = [
   { id: 'today', title: 'Today', icon: Target, description: 'Today\'s tasks', category: 'Tasks' },
   { id: 'week', title: 'Week', icon: Calendar, description: 'Weekly view', category: 'Tasks' },
   { id: 'all', title: 'All Tasks', icon: List, description: 'Complete task list', category: 'Tasks' },
+  { id: 'long-term-goals', title: 'Long-Term Goals', icon: TrendingUp, description: 'Track your big aspirations', category: 'Goals' },
   { id: 'spin-wheel', title: 'Daily Spin', icon: Gift, description: 'Spin for rewards', category: 'Rewards' },
   { id: 'profile', title: 'Profile', icon: User, description: 'User stats & progress', category: 'Profile' },
   { id: 'avatar', title: 'Avatar', icon: Sparkles, description: 'Avatar & level system', category: 'Profile' },
@@ -44,6 +46,7 @@ const navigationItems = [
 
 const categories = [
   { name: 'Tasks', items: navigationItems.filter(item => item.category === 'Tasks') },
+  { name: 'Goals', items: navigationItems.filter(item => item.category === 'Goals') },
   { name: 'Rewards', items: navigationItems.filter(item => item.category === 'Rewards') },
   { name: 'Profile', items: navigationItems.filter(item => item.category === 'Profile') },
   { name: 'Wellness', items: navigationItems.filter(item => item.category === 'Wellness') },

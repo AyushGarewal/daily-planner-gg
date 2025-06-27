@@ -32,6 +32,7 @@ import { CustomTrophyManager } from '../components/CustomTrophyManager';
 import { WeeklyPerformanceTracker } from '../components/WeeklyPerformanceTracker';
 import { HabitHeatmap } from '../components/HabitHeatmap';
 import { useIsMobile } from '../hooks/use-mobile';
+import { LongTermGoals } from '../components/LongTermGoals';
 
 const Index = () => {
   const { 
@@ -95,12 +96,24 @@ const Index = () => {
     
     if (savedTheme === 'dark' || isDarkMode) {
       root.classList.add('dark');
-      root.classList.remove('vibrant');
+      root.classList.remove('vibrant', 'pastel', 'neon', 'monochrome', 'minimal');
     } else if (savedTheme === 'vibrant') {
       root.classList.add('vibrant');
-      root.classList.remove('dark');
+      root.classList.remove('dark', 'pastel', 'neon', 'monochrome', 'minimal');
+    } else if (savedTheme === 'pastel') {
+      root.classList.add('pastel');
+      root.classList.remove('dark', 'vibrant', 'neon', 'monochrome', 'minimal');
+    } else if (savedTheme === 'neon') {
+      root.classList.add('neon');
+      root.classList.remove('dark', 'vibrant', 'pastel', 'monochrome', 'minimal');
+    } else if (savedTheme === 'monochrome') {
+      root.classList.add('monochrome');
+      root.classList.remove('dark', 'vibrant', 'pastel', 'neon', 'minimal');
+    } else if (savedTheme === 'minimal') {
+      root.classList.add('minimal');
+      root.classList.remove('dark', 'vibrant', 'pastel', 'neon', 'monochrome');
     } else {
-      root.classList.remove('dark', 'vibrant');
+      root.classList.remove('dark', 'vibrant', 'pastel', 'neon', 'monochrome');
     }
   }, [userStats.theme, isDarkMode, currentTheme]);
 
@@ -110,17 +123,13 @@ const Index = () => {
     setTheme(theme);
     
     const root = document.documentElement;
-    root.classList.remove('dark', 'vibrant');
+    root.classList.remove('dark', 'vibrant', 'pastel', 'neon', 'monochrome', 'minimal');
     
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      setIsDarkMode(true);
-    } else if (theme === 'vibrant') {
-      root.classList.add('vibrant');
-      setIsDarkMode(false);
-    } else {
-      setIsDarkMode(false);
+    if (theme !== 'light') {
+      root.classList.add(theme);
     }
+    
+    setIsDarkMode(theme === 'dark' || theme === 'neon');
   };
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
@@ -343,6 +352,12 @@ const Index = () => {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'long-term-goals' && (
+              <div className="animate-fade-in">
+                <LongTermGoals />
               </div>
             )}
 

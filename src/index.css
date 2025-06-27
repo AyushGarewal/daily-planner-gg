@@ -123,6 +123,162 @@
     --sidebar-border: 292 84% 90%;
     --sidebar-ring: 271 91% 65%;
   }
+
+  .pastel {
+    --background: 0 0% 100%;
+    --foreground: 184 9% 25%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 184 9% 25%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 184 9% 25%;
+
+    --primary: 172 66% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 180 100% 97%;
+    --secondary-foreground: 172 66% 30%;
+
+    --muted: 180 100% 97%;
+    --muted-foreground: 184 9% 45%;
+
+    --accent: 150 100% 88%;
+    --accent-foreground: 172 66% 30%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 180 50% 90%;
+    --input: 180 50% 90%;
+    --ring: 172 66% 50%;
+
+    --sidebar-background: 180 100% 99%;
+    --sidebar-foreground: 184 9% 25%;
+    --sidebar-primary: 172 66% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 100% 95%;
+    --sidebar-accent-foreground: 172 66% 30%;
+    --sidebar-border: 180 50% 90%;
+    --sidebar-ring: 172 66% 50%;
+  }
+
+  .neon {
+    --background: 0 0% 0%;
+    --foreground: 180 100% 50%;
+
+    --card: 0 0% 5%;
+    --card-foreground: 180 100% 50%;
+
+    --popover: 0 0% 5%;
+    --popover-foreground: 180 100% 50%;
+
+    --primary: 180 100% 50%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 180 100% 50%;
+
+    --muted: 0 0% 10%;
+    --muted-foreground: 180 100% 30%;
+
+    --accent: 0 0% 15%;
+    --accent-foreground: 180 100% 50%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 180 100% 50%;
+
+    --sidebar-background: 0 0% 3%;
+    --sidebar-foreground: 180 100% 50%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 8%;
+    --sidebar-accent-foreground: 180 100% 50%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 180 100% 50%;
+  }
+
+  .monochrome {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 0 0% 90%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 0% 20%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 0%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 0 0% 0%;
+  }
+
+  .minimal {
+    --background: 0 0% 100%;
+    --foreground: 210 11% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 11% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 15%;
+
+    --primary: 210 11% 25%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 9% 97%;
+    --secondary-foreground: 210 11% 25%;
+
+    --muted: 220 9% 97%;
+    --muted-foreground: 210 11% 45%;
+
+    --accent: 220 13% 91%;
+    --accent-foreground: 210 11% 25%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 11% 25%;
+
+    --sidebar-background: 220 9% 99%;
+    --sidebar-foreground: 210 11% 15%;
+    --sidebar-primary: 210 11% 25%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 9% 97%;
+    --sidebar-accent-foreground: 210 11% 25%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 210 11% 25%;
+  }
 }
 
 @layer base {
@@ -177,6 +333,15 @@
     @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
   }
 
+  /* Theme-specific effects */
+  .neon .glow {
+    box-shadow: 0 0 5px hsl(var(--primary)), 0 0 10px hsl(var(--primary)), 0 0 15px hsl(var(--primary));
+  }
+
+  .neon button {
+    box-shadow: 0 0 3px hsl(var(--primary));
+  }
+
   /* Gradient backgrounds for vibrant theme */
   .vibrant .bg-gradient-primary {
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(271 91% 75%) 100%);
@@ -184,6 +349,14 @@
   
   .vibrant .bg-gradient-secondary {
     background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(292 84% 85%) 100%);
+  }
+
+  /* Line clamp utility */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 }
 
