@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon } from 'lucide-react';
+import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 import { useAchievements } from '../hooks/useAchievements';
 import { TaskForm } from '../components/TaskForm';
@@ -21,6 +20,10 @@ import { Task } from '../types/task';
 import { Achievement, SpinReward } from '../types/achievements';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { THEMES } from '../data/achievements';
+import { Profile } from '../components/Profile';
+import { CustomTrophyManager } from '../components/CustomTrophyManager';
+import { WeeklyPerformanceTracker } from '../components/WeeklyPerformanceTracker';
+import { HabitHeatmap } from '../components/HabitHeatmap';
 
 const Index = () => {
   const { 
@@ -223,7 +226,7 @@ const Index = () => {
 
         {/* Task Views */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="today" className="gap-2">
               <List className="h-4 w-4" />
               Today
@@ -232,9 +235,17 @@ const Index = () => {
               <Calendar className="h-4 w-4" />
               Week
             </TabsTrigger>
+            <TabsTrigger value="profile" className="gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
             <TabsTrigger value="trophies" className="gap-2">
               <Trophy className="h-4 w-4" />
               Trophies
+            </TabsTrigger>
+            <TabsTrigger value="custom-trophies" className="gap-2">
+              <Trophy className="h-4 w-4" />
+              Custom
             </TabsTrigger>
             <TabsTrigger value="powerups" className="gap-2">
               <Zap className="h-4 w-4" />
@@ -319,8 +330,22 @@ const Index = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="profile" className="mt-6">
+            <div className="space-y-6">
+              <Profile progress={progress} userStats={userStats} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <HabitHeatmap />
+                <WeeklyPerformanceTracker />
+              </div>
+            </div>
+          </TabsContent>
+
           <TabsContent value="trophies" className="mt-6">
             <TrophyRoom achievements={userStats.achievements} />
+          </TabsContent>
+
+          <TabsContent value="custom-trophies" className="mt-6">
+            <CustomTrophyManager onTrophyCheck={() => []} />
           </TabsContent>
 
           <TabsContent value="powerups" className="mt-6">
