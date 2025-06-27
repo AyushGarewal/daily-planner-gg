@@ -46,11 +46,19 @@ export function useAchievements() {
       hasEarlyCompletion,
     };
 
-    const newAchievements = userStats.achievements.map(achievement => {
-      if (!achievement.unlocked && achievement.condition(checkData)) {
-        return { ...achievement, unlocked: true, unlockedAt: now };
+    // Ensure achievements have condition functions by merging with fresh ACHIEVEMENTS data
+    const newAchievements = userStats.achievements.map((userAchievement, index) => {
+      const freshAchievement = ACHIEVEMENTS[index];
+      const mergedAchievement = {
+        ...freshAchievement,
+        unlocked: userAchievement.unlocked,
+        unlockedAt: userAchievement.unlockedAt
+      };
+
+      if (!mergedAchievement.unlocked && mergedAchievement.condition(checkData)) {
+        return { ...mergedAchievement, unlocked: true, unlockedAt: now };
       }
-      return achievement;
+      return mergedAchievement;
     });
 
     setUserStats(prev => ({

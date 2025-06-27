@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -56,13 +57,13 @@ const Index = () => {
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   
-  // Filter and sort states
+  // Filter and sort states with proper typing
   const [filters, setFilters] = useState<{
     category?: string;
     priority?: string;
     completed?: boolean;
   }>({});
-  const [sortBy, setSortBy] = useState('dueDate');
+  const [sortBy, setSortBy] = useState<'dueDate' | 'xpValue' | 'priority'>('dueDate');
 
   // Check for achievements whenever tasks or progress change
   useEffect(() => {
@@ -110,6 +111,7 @@ const Index = () => {
     switch (reward.type) {
       case 'xp':
         // Add bonus XP to progress
+        console.log(`Bonus XP awarded: ${reward.value}`);
         break;
       case 'power-up':
         addPowerUp({
