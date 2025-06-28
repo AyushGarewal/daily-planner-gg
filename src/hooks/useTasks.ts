@@ -1,7 +1,8 @@
-
+import React from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Task, UserProgress, XP_PER_LEVEL } from '../types/task';
 import { useAchievements } from './useAchievements';
+import { addDays, isBefore, startOfDay } from 'date-fns';
 
 export function useTasks() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', []);
@@ -11,6 +12,7 @@ export function useTasks() {
     currentStreak: 0,
     maxStreak: 0,
   });
+  const [bonusXP, setBonusXP] = useLocalStorage<number>('bonusXP', 0);
 
   const { userStats, useStreakShield } = useAchievements();
 
@@ -21,6 +23,35 @@ export function useTasks() {
       completed: false,
     };
     setTasks(prev => [...prev, newTask]);
+    
+    // Auto-generate recurring tasks
+    generateRecurringTasks(newTask);
+  };
+
+  const generateRecurringTasks = (baseTask: Task) => {
+    if (baseTask.recurrence === 'None') return;
+    
+    const today = startOfDay(new Date());
+    const taskDate = startOfDay(new Date(baseTask.dueDate));
+    
+    // Only generate future recurring tasks
+    if (!isBefore(taskDate, today) && baseTask.recurrence === 'Daily') {
+      const futureTasks: Task[] = [];
+      
+      // Generate next 30 days of recurring tasks
+      for (let i = 1; i <= 30; i++) {
+        const futureDate = addDays(taskDate, i);
+        futureTasks.push({
+          ...baseTask,
+          id: crypto.randomUUID(),
+          dueDate: futureDate,
+          completed: false,
+          completedAt: undefined,
+        });
+      }
+      
+      setTasks(prev => [...prev, ...futureTasks]);
+    }
   };
 
   const updateTask = (id: string, updates: Partial<Task>) => {
@@ -76,6 +107,39 @@ export function useTasks() {
         lastCompletionDate: completedAt,
       };
     });
+  };
+
+  const addBonusXP = (amount: number) => {
+    setProgress(prev => {
+      const newTotalXP = prev.totalXP + amount;
+      const newLevel = Math.floor(newTotalXP / XP_PER_LEVEL) + 1;
+      
+      return {
+        ...prev,
+        totalXP: newTotalXP,
+        level: newLevel,
+      };
+    });
+    setBonusXP(0); // Clear bonus XP after using
+  };
+
+  const markMissedHabits = () => {
+    const today = startOfDay(new Date());
+    const yesterday = addDays(today, -1);
+    
+    setTasks(prev => prev.map(task => {
+      const taskDate = startOfDay(new Date(task.dueDate));
+      
+      // Mark incomplete recurring tasks from yesterday as failed
+      if (
+        task.recurrence === 'Daily' && 
+        taskDate.getTime() === yesterday.getTime() && 
+        !task.completed
+      ) {
+        return { ...task, completed: false, failed: true };
+      }
+      return task;
+    }));
   };
 
   const getTodaysTasks = () => {
@@ -145,21 +209,74 @@ export function useTasks() {
     });
   };
 
+  // Auto-mark missed habits on component mount
+  React.useEffect(() => {
+    markMissedHabits();
+  }, []);
+
   return {
     tasks,
     progress,
+    bonusXP,
     addTask,
     updateTask,
     deleteTask,
     completeTask,
+    addBonusXP,
     getTodaysTasks,
-    getTodaysNormalTasks,
-    getTodaysSurplusTasks,
-    getTodayCompletionPercentage,
-    shouldShowSurplusTasks,
-    getVisibleTodaysTasks,
-    getTasksForDate,
-    filterTasks,
-    sortTasks,
+    getTodaysNormalTasks: () => getTodaysTasks().filter(task => task.taskType === 'normal'),
+    getTodaysSurplusTasks: () => getTodaysTasks().filter(task => task.taskType === 'surplus'),
+    getTodayCompletionPercentage: () => {
+      const todaysTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
+      if (todaysTasks.length === 0) return 0;
+      const completedCount = todaysTasks.filter(task => task.completed).length;
+      return Math.round((completedCount / todaysTasks.length) * 100);
+    },
+    shouldShowSurplusTasks: () => {
+      const todaysTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
+      if (todaysTasks.length === 0) return false;
+      const completedCount = todaysTasks.filter(task => task.completed).length;
+      return Math.round((completedCount / todaysTasks.length) * 100) >= 80;
+    },
+    getVisibleTodaysTasks: () => {
+      const normalTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
+      const surplusTasks = getTodaysTasks().filter(task => task.taskType === 'surplus');
+      
+      const todaysTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
+      const completedCount = todaysTasks.filter(task => task.completed).length;
+      const completionPercentage = todaysTasks.length === 0 ? 0 : Math.round((completedCount / todaysTasks.length) * 100);
+      
+      if (completionPercentage >= 80) {
+        return [...normalTasks, ...surplusTasks];
+      }
+      return normalTasks;
+    },
+    getTasksForDate: (date: Date) => {
+      const dateStr = date.toDateString();
+      return tasks.filter(task => new Date(task.dueDate).toDateString() === dateStr);
+    },
+    filterTasks: (filters: { category?: string; priority?: string; completed?: boolean }) => {
+      return tasks.filter(task => {
+        if (filters.category && task.category !== filters.category) return false;
+        if (filters.priority && task.priority !== filters.priority) return false;
+        if (filters.completed !== undefined && task.completed !== filters.completed) return false;
+        return true;
+      });
+    },
+    sortTasks: (sortBy: 'dueDate' | 'xpValue' | 'priority') => {
+      return [...tasks].sort((a, b) => {
+        switch (sortBy) {
+          case 'dueDate':
+            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          case 'xpValue':
+            return b.xpValue - a.xpValue;
+          case 'priority':
+            const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+          default:
+            return 0;
+        }
+      });
+    },
   };
 }

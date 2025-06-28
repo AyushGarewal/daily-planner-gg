@@ -11,6 +11,7 @@ export interface Task {
   completed: boolean;
   completedAt?: Date;
   taskType: 'normal' | 'surplus';
+  failed?: boolean;
 }
 
 export interface Subtask {

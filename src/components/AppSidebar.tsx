@@ -40,7 +40,7 @@ const navigationItems = [
   { id: 'avatar', title: 'Avatar', icon: Sparkles, description: 'Avatar & level system', category: 'Profile' },
   { id: 'trophies', title: 'Trophies', icon: Trophy, description: 'Earned achievements', category: 'Rewards' },
   { id: 'custom-trophies', title: 'Custom Goals', icon: Trophy, description: 'Create custom goals', category: 'Rewards' },
-  { id: 'powerups', title: 'Power-Ups', icon: Zap, description: 'Use power-ups', category: 'Rewards' },
+  { id: 'powerups', title: 'Inventory', icon: Zap, description: 'Use items & rewards', category: 'Rewards' },
   { id: 'wellness', title: 'Wellness', icon: Heart, description: 'Mood & insights', category: 'Wellness' },
 ];
 

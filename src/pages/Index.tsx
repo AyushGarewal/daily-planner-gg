@@ -34,15 +34,18 @@ import { HabitHeatmap } from '../components/HabitHeatmap';
 import { useIsMobile } from '../hooks/use-mobile';
 import { LongTermGoals } from '../components/LongTermGoals';
 import { StatusBar } from '../components/StatusBar';
+import { Inventory } from '../components/Inventory';
 
 const Index = () => {
   const { 
     tasks, 
     progress, 
+    bonusXP,
     addTask, 
     updateTask, 
     deleteTask, 
-    completeTask, 
+    completeTask,
+    addBonusXP,
     getTodaysTasks, 
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,
@@ -58,6 +61,7 @@ const Index = () => {
     addPowerUp,
     usePowerUp,
     addStreakShield,
+    useStreakShield,
     canSpin,
     recordSpin,
     setTheme
@@ -159,8 +163,10 @@ const Index = () => {
     
     switch (reward.type) {
       case 'xp':
-        // Add bonus XP to progress
-        console.log(`Bonus XP awarded: ${reward.value}`);
+        // Store bonus XP to be used from inventory
+        const currentBonusXP = localStorage.getItem('bonusXP');
+        const newBonusXP = (currentBonusXP ? parseInt(currentBonusXP) : 0) + (reward.value as number);
+        localStorage.setItem('bonusXP', newBonusXP.toString());
         break;
       case 'power-up':
         addPowerUp({
@@ -191,6 +197,10 @@ const Index = () => {
     }
     
     usePowerUp(powerUpId);
+  };
+
+  const handleUseXPBoost = (amount: number) => {
+    addBonusXP(amount);
   };
 
   const visibleTodaysTasks = getVisibleTodaysTasks();
@@ -412,9 +422,13 @@ const Index = () => {
 
             {activeTab === 'powerups' && (
               <div className="animate-fade-in">
-                <PowerUpManager 
-                  powerUps={userStats.powerUps} 
-                  onUsePowerUp={handleUsePowerUp} 
+                <Inventory 
+                  powerUps={userStats.powerUps}
+                  streakShields={userStats.streakShields}
+                  bonusXP={bonusXP}
+                  onUsePowerUp={handleUsePowerUp}
+                  onUseStreakShield={useStreakShield}
+                  onUseXPBoost={handleUseXPBoost}
                 />
               </div>
             )}

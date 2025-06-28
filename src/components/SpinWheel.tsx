@@ -21,7 +21,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
     setIsSpinning(true);
     
     // Generate multiple rotations plus random final position
-    const baseRotations = 5; // 5 full spins
+    const baseRotations = 5;
     const randomRotation = Math.random() * 360;
     const totalRotation = spinRotation + (baseRotations * 360) + randomRotation;
     setSpinRotation(totalRotation);
@@ -43,7 +43,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
       setIsSpinning(false);
       setResult(selectedReward);
       onReward(selectedReward);
-    }, 3000); // 3 seconds for spin animation
+    }, 3000);
   };
 
   const handleClose = () => {
@@ -83,10 +83,8 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
             <>
               <div className="text-center">
                 <div className="relative mx-auto w-48 h-48">
-                  {/* Wheel segments background */}
                   <div className="absolute inset-0 rounded-full border-8 border-purple-500 bg-gradient-conic from-purple-400 via-pink-500 via-blue-500 via-green-500 to-purple-400 shadow-lg"></div>
                   
-                  {/* Spinning center with smooth rotation */}
                   <div 
                     className={`absolute inset-4 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center transition-transform duration-3000 ease-out ${
                       isSpinning ? 'animate-spin' : ''
@@ -99,7 +97,6 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
                     <Sparkles className="h-8 w-8 text-purple-500" />
                   </div>
                   
-                  {/* Pointer */}
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
                     <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-yellow-400"></div>
                   </div>
@@ -159,7 +156,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
               
               <div className="flex items-center justify-center gap-2 text-sm text-green-600 dark:text-green-400">
                 <Star className="h-4 w-4" />
-                <span>Reward successfully added to your account!</span>
+                <span>Reward added to your inventory!</span>
               </div>
               
               <Button onClick={handleClose} className="w-full min-h-[48px]">
