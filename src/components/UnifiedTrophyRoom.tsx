@@ -179,7 +179,7 @@ export function UnifiedTrophyRoom({ achievements, customTrophies, onTrophyCheck 
         </TabsContent>
 
         <TabsContent value="create">
-          <CustomTrophyManager onTrophyCheck={() => onTrophyCheck([])} />
+          <CustomTrophyManager onTrophyCheck={() => { onTrophyCheck([]); return []; }} />
         </TabsContent>
       </Tabs>
     </div>
