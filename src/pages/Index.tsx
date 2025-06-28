@@ -37,6 +37,9 @@ import { StatusBar } from '../components/StatusBar';
 import { Inventory } from '../components/Inventory';
 import { LevelUpAnimation } from '../components/LevelUpAnimation';
 import { UnifiedTrophyRoom } from '../components/UnifiedTrophyRoom';
+import { EnhancedCustomTrophyManager } from '../components/EnhancedCustomTrophyManager';
+import { CustomChallenges } from '../components/CustomChallenges';
+import { MonthlyTasksView } from '../components/MonthlyTasksView';
 
 const Index = () => {
   const { 
@@ -412,9 +415,21 @@ const Index = () => {
               </div>
             )}
 
+            {activeTab === 'monthly' && (
+              <div className="animate-fade-in">
+                <MonthlyTasksView />
+              </div>
+            )}
+
             {activeTab === 'long-term-goals' && (
               <div className="animate-fade-in">
                 <LongTermGoals />
+              </div>
+            )}
+
+            {activeTab === 'challenges' && (
+              <div className="animate-fade-in">
+                <CustomChallenges />
               </div>
             )}
 
@@ -444,11 +459,24 @@ const Index = () => {
 
             {activeTab === 'trophies' && (
               <div className="animate-fade-in">
-                <UnifiedTrophyRoom 
-                  achievements={userStats.achievements} 
-                  customTrophies={[]} 
-                  onTrophyCheck={() => []} 
-                />
+                <Tabs defaultValue="unified" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="unified">Regular Trophies</TabsTrigger>
+                    <TabsTrigger value="enhanced">Enhanced Trophies</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="unified">
+                    <UnifiedTrophyRoom 
+                      achievements={userStats.achievements} 
+                      customTrophies={[]} 
+                      onTrophyCheck={() => []} 
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="enhanced">
+                    <EnhancedCustomTrophyManager onTrophyCheck={() => []} />
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
 

@@ -52,10 +52,12 @@ export interface DailyUsage {
 }
 
 export interface CustomTrophyCondition {
-  type: 'streak' | 'tasks_completed' | 'early_bird' | 'level_reached' | 'category_tasks' | 'xp_gained';
+  type: 'streak' | 'tasks_completed' | 'early_bird' | 'level_reached' | 'category_tasks' | 'xp_gained' | 'completion_time';
   value: number;
   category?: string;
   timeframe?: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  operator?: 'gte' | 'lte' | 'eq';
+  tags?: string[];
 }
 
 export interface CustomTrophy {
@@ -63,8 +65,28 @@ export interface CustomTrophy {
   name: string;
   description: string;
   icon: string;
-  condition: CustomTrophyCondition;
+  conditions: CustomTrophyCondition[];
   xpReward: number;
   unlocked: boolean;
   unlockedAt?: Date;
+  requiresAll?: boolean; // true = AND logic, false = OR logic
+}
+
+export interface Challenge {
+  id: string;
+  name: string;
+  description: string;
+  goal: string;
+  duration: number; // in days
+  startDate: Date;
+  endDate: Date;
+  progress: number;
+  completed: boolean;
+  xpReward: number;
+  badgeIcon: string;
+  conditions: {
+    type: 'completion_percentage' | 'task_count' | 'streak_days' | 'category_focus';
+    target: number;
+    category?: string;
+  }[];
 }

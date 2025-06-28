@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   Sidebar, 
@@ -8,20 +9,19 @@ import {
   SidebarMenu, 
   SidebarMenuButton, 
   SidebarMenuItem,
-  SidebarTrigger
+  useSidebar
 } from '@/components/ui/sidebar';
 import { 
   Calendar, 
   List, 
+  BarChart3, 
+  Heart, 
   Trophy, 
   Zap, 
-  Heart, 
-  User, 
   Gift, 
+  User, 
   Target,
-  BarChart3,
-  Sparkles,
-  TrendingUp
+  CalendarDays
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -29,66 +29,70 @@ interface AppSidebarProps {
   onTabChange: (tab: string) => void;
 }
 
-const navigationItems = [
-  { id: 'today', title: 'Today', icon: Target, description: 'Today\'s tasks', category: 'Tasks' },
-  { id: 'week', title: 'Week', icon: Calendar, description: 'Weekly view', category: 'Tasks' },
-  { id: 'all', title: 'All Tasks', icon: List, description: 'Complete task list', category: 'Tasks' },
-  { id: 'long-term-goals', title: 'Long-Term Goals', icon: TrendingUp, description: 'Track your big aspirations', category: 'Goals' },
-  { id: 'spin-wheel', title: 'Daily Spin', icon: Gift, description: 'Spin for rewards', category: 'Rewards' },
-  { id: 'profile', title: 'Profile', icon: User, description: 'User stats & progress', category: 'Profile' },
-  { id: 'avatar', title: 'Avatar', icon: Sparkles, description: 'Avatar & level system', category: 'Profile' },
-  { id: 'trophies', title: 'Trophies', icon: Trophy, description: 'All achievements & custom goals', category: 'Rewards' },
-  { id: 'powerups', title: 'Inventory', icon: Zap, description: 'Use items & rewards', category: 'Rewards' },
-  { id: 'wellness', title: 'Wellness', icon: Heart, description: 'Mood & insights', category: 'Wellness' },
+const mainItems = [
+  { id: 'today', title: 'Today', icon: Calendar },
+  { id: 'week', title: 'This Week', icon: CalendarDays },
+  { id: 'monthly', title: 'Monthly View', icon: Calendar },
+  { id: 'all', title: 'All Tasks', icon: List },
 ];
 
-const categories = [
-  { name: 'Tasks', items: navigationItems.filter(item => item.category === 'Tasks') },
-  { name: 'Goals', items: navigationItems.filter(item => item.category === 'Goals') },
-  { name: 'Rewards', items: navigationItems.filter(item => item.category === 'Rewards') },
-  { name: 'Profile', items: navigationItems.filter(item => item.category === 'Profile') },
-  { name: 'Wellness', items: navigationItems.filter(item => item.category === 'Wellness') },
+const featuresItems = [
+  { id: 'long-term-goals', title: 'Long-term Goals', icon: Target },
+  { id: 'challenges', title: 'Custom Challenges', icon: Target },
+  { id: 'spin-wheel', title: 'Daily Spin', icon: Gift },
+  { id: 'wellness', title: 'Wellness', icon: Heart },
+];
+
+const gamificationItems = [
+  { id: 'trophies', title: 'Trophies', icon: Trophy },
+  { id: 'powerups', title: 'Power-ups', icon: Zap },
+  { id: 'profile', title: 'Profile', icon: User },
+  { id: 'avatar', title: 'Avatar', icon: User },
 ];
 
 export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
+  const { collapsed } = useSidebar();
+
+  const renderMenuItems = (items: typeof mainItems) => (
+    <SidebarMenu>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.id}>
+          <SidebarMenuButton 
+            onClick={() => onTabChange(item.id)}
+            isActive={activeTab === item.id}
+            className={activeTab === item.id ? 'bg-primary text-primary-foreground' : ''}
+          >
+            <item.icon className="h-4 w-4" />
+            {!collapsed && <span>{item.title}</span>}
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
+  );
+
   return (
-    <Sidebar className="border-r">
+    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-lg font-bold px-4 py-6">
-            Task Planner
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>Tasks</SidebarGroupLabel>
+          <SidebarGroupContent>
+            {renderMenuItems(mainItems)}
+          </SidebarGroupContent>
         </SidebarGroup>
-        
-        {categories.map((category) => (
-          <SidebarGroup key={category.name}>
-            <SidebarGroupLabel className="px-4 py-2 text-sm font-semibold text-muted-foreground">
-              {category.name}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {category.items.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      onClick={() => onTabChange(item.id)}
-                      isActive={activeTab === item.id}
-                      className="w-full justify-start min-h-[48px] px-4 hover:bg-accent transition-colors"
-                    >
-                      <item.icon className="h-4 w-4 mr-3 shrink-0" />
-                      <div className="flex flex-col items-start min-w-0">
-                        <span className="text-sm font-medium truncate">{item.title}</span>
-                        <span className="text-xs text-muted-foreground truncate">{item.description}</span>
-                      </div>
-                      {item.id === 'spin-wheel' && (
-                        <span className="ml-auto text-lg animate-spin-slow">🎯</span>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Features</SidebarGroupLabel>
+          <SidebarGroupContent>
+            {renderMenuItems(featuresItems)}
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Gamification</SidebarGroupLabel>
+          <SidebarGroupContent>
+            {renderMenuItems(gamificationItems)}
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );

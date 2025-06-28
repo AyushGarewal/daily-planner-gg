@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Task, UserProgress, getCurrentLevel, getXPRequiredForLevel, DailyUsage } from '../types/task';
 import { useAchievements } from './useAchievements';
-import { addDays, isBefore, startOfDay } from 'date-fns';
+import { addDays, isBefore, startOfDay, isSameDay } from 'date-fns';
 
 export function useTasks() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', []);
@@ -37,13 +36,16 @@ export function useTasks() {
     const today = startOfDay(new Date());
     const taskDate = startOfDay(new Date(baseTask.dueDate));
     
-    // Only generate future recurring tasks
-    if (!isBefore(taskDate, today) && baseTask.recurrence === 'Daily') {
+    // For daily recurring tasks, generate future tasks including today if not already created
+    if (baseTask.recurrence === 'Daily') {
       const futureTasks: Task[] = [];
       
-      // Generate next 30 days of recurring tasks
+      // Start from tomorrow if task is for today, or from the task date if it's in the future
+      const startDate = isSameDay(taskDate, today) ? addDays(taskDate, 1) : taskDate;
+      
+      // Generate next 30 days of recurring tasks (excluding the original task day)
       for (let i = 1; i <= 30; i++) {
-        const futureDate = addDays(taskDate, i);
+        const futureDate = addDays(startDate, i - 1);
         futureTasks.push({
           ...baseTask,
           id: crypto.randomUUID(),
