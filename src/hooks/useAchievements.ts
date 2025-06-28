@@ -1,6 +1,6 @@
 
 import { useLocalStorage } from './useLocalStorage';
-import { Achievement, PowerUp, UserStats } from '../types/achievements';
+import { Achievement, PowerUp, UserStats, DailyUsage } from '../types/achievements';
 import { ACHIEVEMENTS } from '../data/achievements';
 import { UserProgress } from '../types/task';
 
@@ -12,6 +12,9 @@ export function useAchievements() {
     totalTasksCompleted: 0,
     earlyBirdCount: 0,
     theme: 'light',
+    dailyUsage: [],
+    unlockedThemes: ['light'],
+    motivationQuotes: [],
   });
 
   const checkAchievements = (progress: UserProgress, tasks: any[]) => {

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { UserProgress, XP_PER_LEVEL } from '../types/task';
+import { UserProgress, getXPForCurrentLevel, getXPForNextLevel } from '../types/task';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface AvatarProps {
@@ -75,8 +75,9 @@ export function Avatar({ progress, size = 'small', showDetails = false }: Avatar
     }
   };
 
-  const currentLevelXP = progress.totalXP % XP_PER_LEVEL;
-  const levelProgress = (currentLevelXP / XP_PER_LEVEL) * 100;
+  const currentLevelXP = getXPForCurrentLevel(progress.totalXP);
+  const nextLevelXP = getXPForNextLevel(progress.totalXP);
+  const levelProgress = nextLevelXP > 0 ? (currentLevelXP / nextLevelXP) * 100 : 100;
 
   const avatarSize = size === 'large' ? 'text-8xl' : 'text-4xl';
 
@@ -124,7 +125,7 @@ export function Avatar({ progress, size = 'small', showDetails = false }: Avatar
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span>XP Progress</span>
-              <span>{currentLevelXP}/{XP_PER_LEVEL}</span>
+              <span>{currentLevelXP}/{nextLevelXP}</span>
             </div>
             <Progress value={levelProgress} className="h-3" />
           </div>

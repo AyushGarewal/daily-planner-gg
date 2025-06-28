@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Zap, Flame, Target } from 'lucide-react';
-import { UserProgress, XP_PER_LEVEL } from '../types/task';
+import { UserProgress, getXPForCurrentLevel, getXPForNextLevel } from '../types/task';
 
 interface ProgressTrackerProps {
   progress: UserProgress;
@@ -12,8 +12,9 @@ interface ProgressTrackerProps {
 }
 
 export function ProgressTracker({ progress, todayCompletionPercentage }: ProgressTrackerProps) {
-  const currentLevelXP = progress.totalXP % XP_PER_LEVEL;
-  const levelProgress = (currentLevelXP / XP_PER_LEVEL) * 100;
+  const currentLevelXP = getXPForCurrentLevel(progress.totalXP);
+  const nextLevelXP = getXPForNextLevel(progress.totalXP);
+  const levelProgress = nextLevelXP > 0 ? (currentLevelXP / nextLevelXP) * 100 : 100;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -50,7 +51,7 @@ export function ProgressTracker({ progress, todayCompletionPercentage }: Progres
             </div>
             <Progress value={levelProgress} className="h-2" />
             <div className="text-xs text-muted-foreground">
-              {currentLevelXP}/{XP_PER_LEVEL} XP to next level
+              {currentLevelXP}/{nextLevelXP} XP to next level
             </div>
           </div>
         </CardContent>

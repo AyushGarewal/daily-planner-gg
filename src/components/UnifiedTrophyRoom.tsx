@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 interface UnifiedTrophyRoomProps {
   achievements: Achievement[];
   customTrophies: CustomTrophy[];
-  onTrophyCheck: (trophies: CustomTrophy[]) => CustomTrophy[];
+  onTrophyCheck: (trophies: CustomTrophy[]) => void;
 }
 
 export function UnifiedTrophyRoom({ achievements, customTrophies, onTrophyCheck }: UnifiedTrophyRoomProps) {
@@ -179,7 +179,7 @@ export function UnifiedTrophyRoom({ achievements, customTrophies, onTrophyCheck 
         </TabsContent>
 
         <TabsContent value="create">
-          <CustomTrophyManager onTrophyCheck={onTrophyCheck} />
+          <CustomTrophyManager onTrophyCheck={() => onTrophyCheck([])} />
         </TabsContent>
       </Tabs>
     </div>

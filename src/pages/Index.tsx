@@ -210,7 +210,7 @@ const Index = () => {
     
     usePowerUp(powerUpId);
     
-    if (['auto-complete', 'skip-token'].includes(powerUp.type)) {
+    if (powerUp.type === 'auto-complete' || powerUp.type === 'skip-token') {
       markDailyUsed(powerUp.type === 'auto-complete' ? 'autoComplete' : 'skipToken');
     }
   };
