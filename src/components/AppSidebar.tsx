@@ -51,7 +51,8 @@ const gamificationItems = [
 ];
 
 export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
 
   const renderMenuItems = (items: typeof mainItems) => (
     <SidebarMenu>
@@ -63,7 +64,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
             className={activeTab === item.id ? 'bg-primary text-primary-foreground' : ''}
           >
             <item.icon className="h-4 w-4" />
-            {!collapsed && <span>{item.title}</span>}
+            {!isCollapsed && <span>{item.title}</span>}
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}
@@ -71,7 +72,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
   );
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-60"} collapsible>
+    <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Tasks</SidebarGroupLabel>
