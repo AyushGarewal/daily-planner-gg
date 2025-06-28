@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Gift, Sparkles, X } from 'lucide-react';
+import { Gift, Sparkles, X, Trophy, Star } from 'lucide-react';
 import { SPIN_REWARDS } from '../data/achievements';
 import { SpinReward, PowerUp } from '../types/achievements';
 
@@ -15,9 +15,16 @@ interface SpinWheelProps {
 export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState<SpinReward | null>(null);
+  const [spinRotation, setSpinRotation] = useState(0);
 
   const handleSpin = () => {
     setIsSpinning(true);
+    
+    // Generate multiple rotations plus random final position
+    const baseRotations = 5; // 5 full spins
+    const randomRotation = Math.random() * 360;
+    const totalRotation = spinRotation + (baseRotations * 360) + randomRotation;
+    setSpinRotation(totalRotation);
     
     // Calculate weighted random selection
     const totalProbability = SPIN_REWARDS.reduce((sum, reward) => sum + reward.probability, 0);
@@ -36,16 +43,26 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
       setIsSpinning(false);
       setResult(selectedReward);
       onReward(selectedReward);
-    }, 2000);
+    }, 3000); // 3 seconds for spin animation
   };
 
   const handleClose = () => {
     setResult(null);
+    setSpinRotation(0);
     onClose();
   };
 
+  const getRewardIcon = (reward: SpinReward) => {
+    switch (reward.type) {
+      case 'xp': return '⭐';
+      case 'power-up': return '⚡';
+      case 'streak-shield': return '🛡️';
+      default: return '🎁';
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
       <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto animate-scale-in">
         <CardHeader className="relative">
           <Button 
@@ -65,11 +82,29 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
           {!result ? (
             <>
               <div className="text-center">
-                <div className={`w-32 h-32 sm:w-48 sm:h-48 mx-auto rounded-full border-8 border-purple-500 flex items-center justify-center ${
-                  isSpinning ? 'animate-spin' : ''
-                } bg-gradient-to-br from-purple-400 to-pink-500 shadow-lg`}>
-                  <Sparkles className="h-8 w-8 sm:h-16 sm:w-16 text-white" />
+                <div className="relative mx-auto w-48 h-48">
+                  {/* Wheel segments background */}
+                  <div className="absolute inset-0 rounded-full border-8 border-purple-500 bg-gradient-conic from-purple-400 via-pink-500 via-blue-500 via-green-500 to-purple-400 shadow-lg"></div>
+                  
+                  {/* Spinning center with smooth rotation */}
+                  <div 
+                    className={`absolute inset-4 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center transition-transform duration-3000 ease-out ${
+                      isSpinning ? 'animate-spin' : ''
+                    }`}
+                    style={{ 
+                      transform: `rotate(${spinRotation}deg)`,
+                      transitionDuration: isSpinning ? '3s' : '0.3s'
+                    }}
+                  >
+                    <Sparkles className="h-8 w-8 text-purple-500" />
+                  </div>
+                  
+                  {/* Pointer */}
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2">
+                    <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-yellow-400"></div>
+                  </div>
                 </div>
+                
                 <p className="text-sm text-muted-foreground mt-4">
                   🎉 Congratulations on completing all your tasks today!
                 </p>
@@ -80,7 +115,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
                 <div className="grid grid-cols-2 gap-2">
                   {SPIN_REWARDS.map((reward) => (
                     <Badge key={reward.id} variant="outline" className="justify-center py-2 text-xs">
-                      {reward.title}
+                      {getRewardIcon(reward)} {reward.title}
                     </Badge>
                   ))}
                 </div>
@@ -106,16 +141,27 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
             </>
           ) : (
             <div className="text-center space-y-4 animate-fade-in">
-              <div className="text-4xl sm:text-6xl mb-4 animate-bounce">🎉</div>
-              <h3 className="text-xl font-bold">You Won!</h3>
-              <div className="p-4 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900 dark:to-orange-900 rounded-lg">
-                <Badge className="text-base sm:text-lg px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
+              <div className="text-6xl mb-4 animate-bounce">🎉</div>
+              <Trophy className="h-12 w-12 mx-auto text-yellow-500 animate-pulse" />
+              <h3 className="text-2xl font-bold">You Won!</h3>
+              
+              <div className="p-6 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-lg border-2 border-yellow-300 dark:border-yellow-600">
+                <div className="text-4xl mb-2">{getRewardIcon(result)}</div>
+                <Badge className="text-lg px-4 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
                   {result.title}
                 </Badge>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {result.type === 'xp' && `+${result.value} XP bonus!`}
+                  {result.type === 'power-up' && 'Power-up added to your inventory!'}
+                  {result.type === 'streak-shield' && `${result.value} streak shields added!`}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Your reward has been added to your account!
-              </p>
+              
+              <div className="flex items-center justify-center gap-2 text-sm text-green-600 dark:text-green-400">
+                <Star className="h-4 w-4" />
+                <span>Reward successfully added to your account!</span>
+              </div>
+              
               <Button onClick={handleClose} className="w-full min-h-[48px]">
                 Awesome! Close
               </Button>

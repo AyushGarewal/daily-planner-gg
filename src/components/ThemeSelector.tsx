@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Sun, Moon, Palette, Settings } from 'lucide-react';
+import { Sun, Moon, Palette, Settings, Sparkles } from 'lucide-react';
 import { AVAILABLE_THEMES } from '../data/themes';
 import { ThemePreview } from './ThemePreview';
 
@@ -27,8 +27,9 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
         return <Moon className="h-4 w-4" />;
       case 'vibrant':
       case 'pastel':
-      case 'neon':
         return <Palette className="h-4 w-4" />;
+      case 'minimal':
+        return <Sparkles className="h-4 w-4" />;
       default:
         return <Sun className="h-4 w-4" />;
     }
@@ -38,6 +39,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
     { id: 'light', name: 'Light', icon: Sun },
     { id: 'dark', name: 'Dark', icon: Moon },
     { id: 'vibrant', name: 'Vibrant', icon: Palette },
+    { id: 'minimal', name: 'Minimal', icon: Sparkles },
   ];
 
   return (
@@ -76,7 +78,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
             className="flex items-center gap-2 cursor-pointer hover:bg-accent border-t"
           >
             <Settings className="h-4 w-4" />
-            <span>More Themes...</span>
+            <span>All Themes...</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -84,7 +86,10 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
       <Dialog open={showThemeDialog} onOpenChange={setShowThemeDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
           <DialogHeader>
-            <DialogTitle>Choose Your Theme</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Choose Your Theme
+            </DialogTitle>
           </DialogHeader>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

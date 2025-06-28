@@ -33,6 +33,7 @@ import { WeeklyPerformanceTracker } from '../components/WeeklyPerformanceTracker
 import { HabitHeatmap } from '../components/HabitHeatmap';
 import { useIsMobile } from '../hooks/use-mobile';
 import { LongTermGoals } from '../components/LongTermGoals';
+import { StatusBar } from '../components/StatusBar';
 
 const Index = () => {
   const { 
@@ -216,11 +217,11 @@ const Index = () => {
         <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
         
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Enhanced Header */}
+          {/* Enhanced Mobile-First Header */}
           <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 shadow-sm">
             <div className="flex items-center justify-between p-3 sm:p-4 gap-2">
               <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                <SidebarTrigger className="shrink-0" />
+                <SidebarTrigger className="shrink-0 min-h-[44px] min-w-[44px]" />
                 <div className="hidden sm:block min-w-0">
                   <h1 className="text-lg sm:text-2xl font-bold truncate">Task Planner</h1>
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">Stay productive and build great habits</p>
@@ -230,22 +231,21 @@ const Index = () => {
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                {/* Avatar Widget */}
-                <div className="hidden sm:block">
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Mobile Avatar */}
+                <div className="block sm:hidden">
                   <Avatar progress={progress} size="small" showDetails={false} />
+                </div>
+                
+                {/* Desktop Avatar */}
+                <div className="hidden sm:block">
+                  <Avatar progress={progress} size="small" showDetails={true} />
                 </div>
                 
                 {/* Theme Toggle */}
                 <ThemeSelector currentTheme={currentTheme} onThemeChange={handleThemeChange} />
                 
-                {/* Streak Shield Counter */}
-                {userStats.streakShields > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 rounded-md">
-                    <span className="text-xs sm:text-sm">🛡️ {userStats.streakShields}</span>
-                  </div>
-                )}
-                
+                {/* Add Task Button */}
                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                   <DialogTrigger asChild>
                     <Button className="gap-2 min-h-[44px]" size={isMobile ? "sm" : "default"}>
@@ -269,9 +269,20 @@ const Index = () => {
 
           {/* Main Content */}
           <main className="flex-1 container mx-auto p-3 sm:p-4 max-w-6xl">
-            {/* XP Bar */}
+            {/* XP Bar - Always visible */}
             <div className="mb-4 sm:mb-6">
               <XPBar progress={progress} />
+            </div>
+
+            {/* Status Bar - Mobile optimized */}
+            <div className="mb-4 sm:mb-6">
+              <StatusBar
+                userStats={userStats}
+                progress={progress}
+                canSpin={canSpin}
+                todayCompletionPercentage={todayCompletionPercentage}
+                onSpinClick={() => setShowSpinWheel(true)}
+              />
             </div>
 
             {/* Progress Tracker */}
@@ -296,7 +307,9 @@ const Index = () => {
                 
                 {visibleTodaysTasks.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No tasks for today. Add some tasks to get started!</p>
+                    <div className="text-4xl mb-4">📝</div>
+                    <p className="text-lg mb-2">No tasks for today!</p>
+                    <p className="text-sm">Add some tasks to get started on your productivity journey.</p>
                   </div>
                 ) : (
                   <div className="grid gap-3 sm:gap-4">
