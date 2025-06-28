@@ -203,15 +203,17 @@ const Index = () => {
     const powerUp = userStats.powerUps.find(p => p.id === powerUpId);
     if (!powerUp) return;
 
+    // Handle auto-complete power-ups through inventory component with task selector
     if (powerUp.type === 'auto-complete') {
-      // Handle via inventory component with task selector
+      // This is handled via the inventory component with task selector
       return;
     }
     
     usePowerUp(powerUpId);
     
-    if (powerUp.type === 'auto-complete' || powerUp.type === 'skip-token') {
-      markDailyUsed(powerUp.type === 'auto-complete' ? 'autoComplete' : 'skipToken');
+    // Mark daily usage for specific power-up types
+    if (powerUp.type === 'skip-token') {
+      markDailyUsed('skipToken');
     }
   };
 
