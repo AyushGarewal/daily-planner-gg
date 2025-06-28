@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Sidebar, 
@@ -38,8 +37,7 @@ const navigationItems = [
   { id: 'spin-wheel', title: 'Daily Spin', icon: Gift, description: 'Spin for rewards', category: 'Rewards' },
   { id: 'profile', title: 'Profile', icon: User, description: 'User stats & progress', category: 'Profile' },
   { id: 'avatar', title: 'Avatar', icon: Sparkles, description: 'Avatar & level system', category: 'Profile' },
-  { id: 'trophies', title: 'Trophies', icon: Trophy, description: 'Earned achievements', category: 'Rewards' },
-  { id: 'custom-trophies', title: 'Custom Goals', icon: Trophy, description: 'Create custom goals', category: 'Rewards' },
+  { id: 'trophies', title: 'Trophies', icon: Trophy, description: 'All achievements & custom goals', category: 'Rewards' },
   { id: 'powerups', title: 'Inventory', icon: Zap, description: 'Use items & rewards', category: 'Rewards' },
   { id: 'wellness', title: 'Wellness', icon: Heart, description: 'Mood & insights', category: 'Wellness' },
 ];

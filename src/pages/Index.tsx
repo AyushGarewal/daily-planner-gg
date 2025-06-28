@@ -35,17 +35,24 @@ import { useIsMobile } from '../hooks/use-mobile';
 import { LongTermGoals } from '../components/LongTermGoals';
 import { StatusBar } from '../components/StatusBar';
 import { Inventory } from '../components/Inventory';
+import { LevelUpAnimation } from '../components/LevelUpAnimation';
+import { UnifiedTrophyRoom } from '../components/UnifiedTrophyRoom';
 
 const Index = () => {
   const { 
     tasks, 
     progress, 
     bonusXP,
+    dailyUsage,
+    showLevelUp,
     addTask, 
     updateTask, 
     deleteTask, 
     completeTask,
     addBonusXP,
+    canUseDaily,
+    markDailyUsed,
+    setShowLevelUp,
     getTodaysTasks, 
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,
@@ -86,7 +93,7 @@ const Index = () => {
   const [sortBy, setSortBy] = useState<'dueDate' | 'xpValue' | 'priority'>('dueDate');
 
   // Check for achievements whenever tasks or progress change
-  useEffect(() => {
+  React.useEffect(() => {
     const newAchievements = checkAchievements(progress, tasks);
     if (newAchievements.length > 0) {
       setNewAchievement(newAchievements[0]); // Show first new achievement
@@ -160,6 +167,7 @@ const Index = () => {
 
   const handleSpinReward = (reward: SpinReward) => {
     recordSpin();
+    markDailyUsed('spinUsed');
     
     switch (reward.type) {
       case 'xp':
@@ -172,7 +180,7 @@ const Index = () => {
         addPowerUp({
           id: `${reward.value}-${Date.now()}`,
           title: reward.title,
-          description: 'Earned from daily spin',
+          description: reward.description || 'Earned from daily spin',
           icon: '⚡',
           uses: 1,
           maxUses: 1,
@@ -182,6 +190,12 @@ const Index = () => {
       case 'streak-shield':
         addStreakShield(reward.value as number);
         break;
+      case 'quote':
+        // Add motivation quote to user stats
+        const quotes = JSON.parse(localStorage.getItem('motivationQuotes') || '[]');
+        quotes.push(reward.description || 'Stay motivated!');
+        localStorage.setItem('motivationQuotes', JSON.stringify(quotes));
+        break;
     }
   };
 
@@ -190,13 +204,31 @@ const Index = () => {
     if (!powerUp) return;
 
     if (powerUp.type === 'auto-complete') {
-      const incompleteTasks = getVisibleTodaysTasks().filter(t => !t.completed);
-      if (incompleteTasks.length > 0) {
-        handleCompleteTask(incompleteTasks[0].id);
-      }
+      // Handle via inventory component with task selector
+      return;
     }
     
     usePowerUp(powerUpId);
+    
+    if (['auto-complete', 'skip-token'].includes(powerUp.type)) {
+      markDailyUsed(powerUp.type === 'auto-complete' ? 'autoComplete' : 'skipToken');
+    }
+  };
+
+  const handleAutoCompleteTask = (taskId: string) => {
+    completeTask(taskId);
+    markDailyUsed('autoComplete');
+    
+    // Remove the auto-complete power-up
+    const autoCompletePowerUp = userStats.powerUps.find(p => p.type === 'auto-complete');
+    if (autoCompletePowerUp) {
+      usePowerUp(autoCompletePowerUp.id);
+    }
+  };
+
+  const handleUseStreakShield = () => {
+    useStreakShield();
+    markDailyUsed('streakShield');
   };
 
   const handleUseXPBoost = (amount: number) => {
@@ -410,13 +442,11 @@ const Index = () => {
 
             {activeTab === 'trophies' && (
               <div className="animate-fade-in">
-                <TrophyRoom achievements={userStats.achievements} />
-              </div>
-            )}
-
-            {activeTab === 'custom-trophies' && (
-              <div className="animate-fade-in">
-                <CustomTrophyManager onTrophyCheck={() => []} />
+                <UnifiedTrophyRoom 
+                  achievements={userStats.achievements} 
+                  customTrophies={[]} 
+                  onTrophyCheck={() => []} 
+                />
               </div>
             )}
 
@@ -426,9 +456,12 @@ const Index = () => {
                   powerUps={userStats.powerUps}
                   streakShields={userStats.streakShields}
                   bonusXP={bonusXP}
+                  tasks={getVisibleTodaysTasks()}
+                  canUseDaily={canUseDaily}
                   onUsePowerUp={handleUsePowerUp}
-                  onUseStreakShield={useStreakShield}
+                  onUseStreakShield={handleUseStreakShield}
                   onUseXPBoost={handleUseXPBoost}
+                  onAutoCompleteTask={handleAutoCompleteTask}
                 />
               </div>
             )}
@@ -512,6 +545,14 @@ const Index = () => {
           <AchievementNotification
             achievement={newAchievement}
             onClose={() => setNewAchievement(null)}
+          />
+        )}
+
+        {/* Level Up Animation */}
+        {showLevelUp && (
+          <LevelUpAnimation
+            newLevel={showLevelUp}
+            onComplete={() => setShowLevelUp(null)}
           />
         )}
       </div>

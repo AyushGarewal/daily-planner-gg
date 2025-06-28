@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { useLocalStorage } from './useLocalStorage';
-import { Task, UserProgress, XP_PER_LEVEL } from '../types/task';
+import { Task, UserProgress, getCurrentLevel, getXPRequiredForLevel, DailyUsage } from '../types/task';
 import { useAchievements } from './useAchievements';
 import { addDays, isBefore, startOfDay } from 'date-fns';
 
@@ -13,6 +14,8 @@ export function useTasks() {
     maxStreak: 0,
   });
   const [bonusXP, setBonusXP] = useLocalStorage<number>('bonusXP', 0);
+  const [dailyUsage, setDailyUsage] = useLocalStorage<DailyUsage[]>('dailyUsage', []);
+  const [showLevelUp, setShowLevelUp] = useLocalStorage<number | null>('showLevelUp', null);
 
   const { userStats, useStreakShield } = useAchievements();
 
@@ -71,10 +74,16 @@ export function useTasks() {
     const completedAt = new Date();
     updateTask(id, { completed: true, completedAt });
 
-    // Update progress with streak shield logic
+    // Update progress with new level system
     setProgress(prev => {
       const newTotalXP = prev.totalXP + task.xpValue;
-      const newLevel = Math.floor(newTotalXP / XP_PER_LEVEL) + 1;
+      const oldLevel = getCurrentLevel(prev.totalXP);
+      const newLevel = getCurrentLevel(newTotalXP);
+      
+      // Show level up animation if leveled up
+      if (newLevel > oldLevel) {
+        setShowLevelUp(newLevel);
+      }
       
       // Update streak
       const today = new Date().toDateString();
@@ -112,7 +121,13 @@ export function useTasks() {
   const addBonusXP = (amount: number) => {
     setProgress(prev => {
       const newTotalXP = prev.totalXP + amount;
-      const newLevel = Math.floor(newTotalXP / XP_PER_LEVEL) + 1;
+      const oldLevel = getCurrentLevel(prev.totalXP);
+      const newLevel = getCurrentLevel(newTotalXP);
+      
+      // Show level up animation if leveled up
+      if (newLevel > oldLevel) {
+        setShowLevelUp(newLevel);
+      }
       
       return {
         ...prev,
@@ -121,6 +136,34 @@ export function useTasks() {
       };
     });
     setBonusXP(0); // Clear bonus XP after using
+  };
+
+  const canUseDaily = (type: keyof DailyUsage): boolean => {
+    const today = new Date().toDateString();
+    const todayUsage = dailyUsage.find(usage => usage.date === today);
+    return !todayUsage?.[type];
+  };
+
+  const markDailyUsed = (type: keyof DailyUsage) => {
+    const today = new Date().toDateString();
+    setDailyUsage(prev => {
+      const existing = prev.find(usage => usage.date === today);
+      if (existing) {
+        return prev.map(usage => 
+          usage.date === today 
+            ? { ...usage, [type]: true }
+            : usage
+        );
+      } else {
+        return [...prev, {
+          date: today,
+          streakShield: type === 'streakShield',
+          autoComplete: type === 'autoComplete',
+          skipToken: type === 'skipToken',
+          spinUsed: type === 'spinUsed'
+        }];
+      }
+    });
   };
 
   const markMissedHabits = () => {
@@ -179,36 +222,6 @@ export function useTasks() {
     return normalTasks;
   };
 
-  const getTasksForDate = (date: Date) => {
-    const dateStr = date.toDateString();
-    return tasks.filter(task => new Date(task.dueDate).toDateString() === dateStr);
-  };
-
-  const filterTasks = (filters: { category?: string; priority?: string; completed?: boolean }) => {
-    return tasks.filter(task => {
-      if (filters.category && task.category !== filters.category) return false;
-      if (filters.priority && task.priority !== filters.priority) return false;
-      if (filters.completed !== undefined && task.completed !== filters.completed) return false;
-      return true;
-    });
-  };
-
-  const sortTasks = (sortBy: 'dueDate' | 'xpValue' | 'priority') => {
-    return [...tasks].sort((a, b) => {
-      switch (sortBy) {
-        case 'dueDate':
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        case 'xpValue':
-          return b.xpValue - a.xpValue;
-        case 'priority':
-          const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        default:
-          return 0;
-      }
-    });
-  };
-
   // Auto-mark missed habits on component mount
   React.useEffect(() => {
     markMissedHabits();
@@ -218,39 +231,22 @@ export function useTasks() {
     tasks,
     progress,
     bonusXP,
+    dailyUsage,
+    showLevelUp,
     addTask,
     updateTask,
     deleteTask,
     completeTask,
     addBonusXP,
+    canUseDaily,
+    markDailyUsed,
+    setShowLevelUp,
     getTodaysTasks,
-    getTodaysNormalTasks: () => getTodaysTasks().filter(task => task.taskType === 'normal'),
-    getTodaysSurplusTasks: () => getTodaysTasks().filter(task => task.taskType === 'surplus'),
-    getTodayCompletionPercentage: () => {
-      const todaysTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
-      if (todaysTasks.length === 0) return 0;
-      const completedCount = todaysTasks.filter(task => task.completed).length;
-      return Math.round((completedCount / todaysTasks.length) * 100);
-    },
-    shouldShowSurplusTasks: () => {
-      const todaysTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
-      if (todaysTasks.length === 0) return false;
-      const completedCount = todaysTasks.filter(task => task.completed).length;
-      return Math.round((completedCount / todaysTasks.length) * 100) >= 80;
-    },
-    getVisibleTodaysTasks: () => {
-      const normalTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
-      const surplusTasks = getTodaysTasks().filter(task => task.taskType === 'surplus');
-      
-      const todaysTasks = getTodaysTasks().filter(task => task.taskType === 'normal');
-      const completedCount = todaysTasks.filter(task => task.completed).length;
-      const completionPercentage = todaysTasks.length === 0 ? 0 : Math.round((completedCount / todaysTasks.length) * 100);
-      
-      if (completionPercentage >= 80) {
-        return [...normalTasks, ...surplusTasks];
-      }
-      return normalTasks;
-    },
+    getTodaysNormalTasks,
+    getTodaysSurplusTasks,
+    getTodayCompletionPercentage,
+    shouldShowSurplusTasks,
+    getVisibleTodaysTasks,
     getTasksForDate: (date: Date) => {
       const dateStr = date.toDateString();
       return tasks.filter(task => new Date(task.dueDate).toDateString() === dateStr);

@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Gift, Sparkles, X, Trophy, Star } from 'lucide-react';
-import { SPIN_REWARDS } from '../data/achievements';
-import { SpinReward, PowerUp } from '../types/achievements';
+import { SPIN_REWARDS } from '../data/spinRewards';
+import { SpinReward } from '../types/achievements';
 
 interface SpinWheelProps {
   onReward: (reward: SpinReward) => void;
@@ -109,7 +108,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
               
               <div className="space-y-3">
                 <h4 className="font-medium text-center">Possible Rewards:</h4>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
                   {SPIN_REWARDS.map((reward) => (
                     <Badge key={reward.id} variant="outline" className="justify-center py-2 text-xs">
                       {getRewardIcon(reward)} {reward.title}
@@ -148,9 +147,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
                   {result.title}
                 </Badge>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {result.type === 'xp' && `+${result.value} XP bonus!`}
-                  {result.type === 'power-up' && 'Power-up added to your inventory!'}
-                  {result.type === 'streak-shield' && `${result.value} streak shields added!`}
+                  {result.description}
                 </p>
               </div>
               
