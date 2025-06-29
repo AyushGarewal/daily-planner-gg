@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -22,6 +23,7 @@ import { Avatar } from '../components/Avatar';
 import { XPBar } from '../components/XPBar';
 import { AvatarScreen } from '../components/AvatarScreen';
 import { SpinWheelCenter } from '../components/SpinWheelCenter';
+import { SpinWheelStatus } from '../components/SpinWheelStatus';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { Task } from '../types/task';
 import { Achievement, SpinReward } from '../types/achievements';

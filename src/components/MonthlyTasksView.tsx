@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ import {
 } from 'date-fns';
 
 export function MonthlyTasksView() {
-  const { tasks, completeTask, deleteTask } = useTasks();
+  const { tasks, completeTask, deleteTask, toggleSubtask } = useTasks();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingTask, setEditingTask] = useState(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
@@ -74,6 +73,10 @@ export function MonthlyTasksView() {
 
   const isToday = (date: Date) => isSameDay(date, new Date());
   const isCurrentMonth = (date: Date) => isSameMonth(date, currentDate);
+
+  const handleSubtaskToggle = (taskId: string, subtaskId: string) => {
+    toggleSubtask(taskId, subtaskId);
+  };
 
   const stats = getTaskStats();
   const monthlyTasks = getMonthlyTasks();
@@ -275,6 +278,7 @@ export function MonthlyTasksView() {
                         onComplete={completeTask}
                         onEdit={setEditingTask}
                         onDelete={deleteTask}
+                        onSubtaskToggle={handleSubtaskToggle}
                       />
                     ))}
                   </div>
