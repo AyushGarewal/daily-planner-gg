@@ -15,7 +15,8 @@ export interface Task {
   failed?: boolean;
   isRoutine?: boolean;
   type: 'task' | 'habit'; // New field to distinguish tasks from habits
-  weekDays?: number[]; // For habits - which days of week to repeat
+  weekDays?: number[]; // For habits - which days of week to repeat (0=Sunday, 1=Monday, etc.)
+  routineName?: string; // To identify which routine this habit belongs to
 }
 
 export interface Subtask {

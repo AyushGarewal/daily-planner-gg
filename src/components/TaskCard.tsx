@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Edit, Trash2, Star, Gift, Repeat, CheckSquare } from 'lucide-react';
-import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Calendar, Clock, Edit2, Trash2, Star, Zap, Users, RotateCcw } from 'lucide-react';
 import { Task } from '../types/task';
-import { SubtaskManager } from './SubtaskManager';
+import { format } from 'date-fns';
 
 interface TaskCardProps {
   task: Task;
@@ -18,95 +18,176 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onComplete, onEdit, onDelete, onSubtaskToggle }: TaskCardProps) {
-  const completedSubtasks = task.subtasks.filter(st => st.completed).length;
-  const allSubtasksCompleted = task.subtasks.length === 0 || completedSubtasks === task.subtasks.length;
-  
   const priorityColors = {
-    High: 'bg-red-500',
-    Medium: 'bg-yellow-500',
-    Low: 'bg-green-500',
+    High: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    Medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    Low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
   };
 
-  const handleMainTaskToggle = () => {
-    if (task.completed) return; // Don't allow unchecking completed tasks
-    if (task.subtasks.length > 0 && !allSubtasksCompleted) return; // Don't allow completing if subtasks remain
-    onComplete(task.id);
-  };
+  const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+  const totalSubtasks = task.subtasks.length;
+  const subtaskProgress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
-  const handleSubtaskToggle = (subtaskId: string) => {
-    onSubtaskToggle(task.id, subtaskId);
+  const handleComplete = () => {
+    if (!task.completed) {
+      onComplete(task.id);
+    }
   };
 
   return (
-    <Card className={`transition-all duration-200 ${task.completed ? 'opacity-70' : 'hover:shadow-md'} ${task.taskType === 'surplus' ? 'border-purple-200 bg-purple-50/50' : ''}`}>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1">
+    <Card className={`transition-all duration-200 hover:shadow-md ${
+      task.completed 
+        ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800' 
+        : task.taskType === 'surplus' 
+          ? 'bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800'
+          : 'hover:border-primary/30'
+    }`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {/* Completion Checkbox */}
+          <div className="mt-1">
             <Checkbox
               checked={task.completed}
-              onCheckedChange={handleMainTaskToggle}
-              className="mt-1"
-              disabled={task.subtasks.length > 0 && !allSubtasksCompleted}
+              onCheckedChange={handleComplete}
+              className="h-5 w-5"
+              disabled={task.completed}
             />
-            <div className="flex-1">
-              <CardTitle className={`text-lg flex items-center gap-2 ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
+          </div>
+
+          {/* Task Content */}
+          <div className="flex-1 min-w-0">
+            {/* Header with title and badges */}
+            <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+              <h3 className={`font-medium text-sm sm:text-base leading-tight ${
+                task.completed ? 'line-through text-muted-foreground' : ''
+              }`}>
                 {task.title}
-                {task.type === 'habit' && <Repeat className="h-4 w-4 text-green-500" />}
-                {task.type === 'task' && <CheckSquare className="h-4 w-4 text-blue-500" />}
-                {task.taskType === 'surplus' && <Gift className="h-4 w-4 text-purple-500" />}
-              </CardTitle>
-              {task.description && (
-                <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+              </h3>
+              
+              <div className="flex flex-wrap gap-1">
+                {task.isRoutine && (
+                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                    <Users className="h-3 w-3 mr-1" />
+                    Routine
+                  </Badge>
+                )}
+                {task.type === 'habit' && (
+                  <Badge variant="outline" className="text-xs">
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Habit
+                  </Badge>
+                )}
+                {task.taskType === 'surplus' && (
+                  <Badge className="text-xs bg-purple-500">
+                    <Star className="h-3 w-3 mr-1" />
+                    Surplus
+                  </Badge>
+                )}
+                <Badge className={`text-xs ${priorityColors[task.priority]}`}>
+                  {task.priority}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Description */}
+            {task.description && (
+              <p className={`text-xs sm:text-sm text-muted-foreground mb-2 ${
+                task.completed ? 'line-through' : ''
+              }`}>
+                {task.description}
+              </p>
+            )}
+
+            {/* Subtasks */}
+            {task.subtasks.length > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">
+                    Subtasks ({completedSubtasks}/{totalSubtasks})
+                  </span>
+                  <Progress value={subtaskProgress} className="w-16 h-2" />
+                </div>
+                
+                <div className="space-y-1">
+                  {task.subtasks.map((subtask) => (
+                    <div key={subtask.id} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={subtask.completed}
+                        onCheckedChange={() => onSubtaskToggle(task.id, subtask.id)}
+                        className="h-4 w-4"
+                        disabled={task.completed}
+                      />
+                      <span className={`text-xs ${
+                        subtask.completed ? 'line-through text-muted-foreground' : ''
+                      }`}>
+                        {subtask.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Footer with metadata and actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  <span>{format(new Date(task.dueDate), 'MMM dd')}</span>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  <span>{task.xpValue} XP</span>
+                </div>
+                
+                <Badge variant="outline" className="text-xs px-1 py-0">
+                  {task.category}
+                </Badge>
+
+                {task.recurrence !== 'None' && (
+                  <div className="flex items-center gap-1">
+                    <RotateCcw className="h-3 w-3" />
+                    <span>{task.recurrence}</span>
+                  </div>
+                )}
+
+                {task.routineName && (
+                  <Badge variant="secondary" className="text-xs">
+                    {task.routineName}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              {!task.completed && (
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(task)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(task.id)}
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               )}
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={`${priorityColors[task.priority]} text-white border-none`}>
-              {task.priority}
-            </Badge>
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <span className="text-sm font-medium">{task.xpValue}</span>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0 space-y-3">
-        <SubtaskManager
-          subtasks={task.subtasks}
-          onSubtaskToggle={handleSubtaskToggle}
-          isMainTaskCompleted={task.completed}
-        />
-        
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>{format(new Date(task.dueDate), 'MMM dd')}</span>
-            </div>
-            <Badge variant="secondary">{task.category}</Badge>
-            {task.recurrence !== 'None' && (
-              <Badge variant="outline">{task.recurrence}</Badge>
+
+            {/* Completion timestamp */}
+            {task.completed && task.completedAt && (
+              <div className="mt-2 text-xs text-green-600 dark:text-green-400">
+                ✓ Completed {format(new Date(task.completedAt), 'MMM dd, yyyy \'at\' h:mm a')}
+              </div>
             )}
-            {task.taskType === 'surplus' && (
-              <Badge variant="outline" className="text-purple-600 border-purple-300">
-                Surplus
-              </Badge>
-            )}
-            <Badge variant="outline" className={task.type === 'habit' ? 'text-green-600 border-green-300' : 'text-blue-600 border-blue-300'}>
-              {task.type === 'habit' ? 'Habit' : 'Task'}
-            </Badge>
-          </div>
-          
-          <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={() => onEdit(task)}>
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onDelete(task.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       </CardContent>

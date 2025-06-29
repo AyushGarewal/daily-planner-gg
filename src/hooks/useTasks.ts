@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Task, UserProgress, getCurrentLevel, getXPRequiredForLevel, DailyUsage } from '../types/task';
 import { useAchievements } from './useAchievements';
-import { addDays, isBefore, startOfDay, isSameDay, getDay } from 'date-fns';
+import { addDays, isBefore, startOfDay, isSameDay, getDay, isAfter } from 'date-fns';
 
 export function useTasks() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', []);
@@ -39,21 +38,25 @@ export function useTasks() {
     const today = startOfDay(new Date());
     const taskDate = startOfDay(new Date(baseTask.dueDate));
     
-    // For daily recurring habits, generate future tasks
+    // For daily recurring habits, generate future tasks starting from creation date
     if (baseTask.recurrence === 'Daily') {
       const futureTasks: Task[] = [];
-      const startDate = addDays(taskDate, 1);
       
-      // Generate next 30 days of recurring tasks
-      for (let i = 0; i < 30; i++) {
-        const futureDate = addDays(startDate, i);
+      // If task is created today and should repeat daily, include today
+      if (isSameDay(taskDate, today)) {
+        // Task for today already exists as the base task
+      }
+      
+      // Generate next 30 days of recurring tasks starting from tomorrow
+      for (let i = 1; i <= 30; i++) {
+        const futureDate = addDays(taskDate, i);
         futureTasks.push({
           ...baseTask,
           id: crypto.randomUUID(),
           dueDate: futureDate,
           completed: false,
           completedAt: undefined,
-          isRoutine: true,
+          isRoutine: baseTask.isRoutine || false,
         });
       }
       
@@ -63,20 +66,26 @@ export function useTasks() {
     // For weekly recurring habits with specific weekdays
     if (baseTask.recurrence === 'Weekly' && baseTask.weekDays) {
       const futureTasks: Task[] = [];
+      const creationDay = getDay(taskDate);
       
-      // Generate next 4 weeks
+      // Check if today should have this habit
+      if (baseTask.weekDays.includes(creationDay) && isSameDay(taskDate, today)) {
+        // Base task covers today, no need to create duplicate
+      }
+      
+      // Generate next 4 weeks starting from creation date
       for (let week = 0; week < 4; week++) {
         baseTask.weekDays.forEach(weekDay => {
           for (let day = 1; day <= 7; day++) {
             const futureDate = addDays(taskDate, (week * 7) + day);
-            if (getDay(futureDate) === weekDay) {
+            if (getDay(futureDate) === weekDay && !isSameDay(futureDate, taskDate)) {
               futureTasks.push({
                 ...baseTask,
                 id: crypto.randomUUID(),
                 dueDate: futureDate,
                 completed: false,
                 completedAt: undefined,
-                isRoutine: true,
+                isRoutine: baseTask.isRoutine || false,
               });
             }
           }
