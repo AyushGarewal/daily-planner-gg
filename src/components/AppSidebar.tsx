@@ -107,13 +107,13 @@ export function AppSidebar({ activeTab, onTabChange, progress }: AppSidebarProps
             <SidebarGroupContent>
               <div className="px-2 py-4 space-y-3">
                 <div className="flex justify-center">
-                  <Avatar progress={currentProgress} size="medium" showDetails={false} />
+                  <Avatar progress={currentProgress} size="small" showDetails={false} />
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium">Level {currentProgress.level}</p>
                   <p className="text-xs text-muted-foreground">{currentProgress.totalXP} XP</p>
                 </div>
-                <XPBar progress={currentProgress} compact />
+                <XPBar progress={currentProgress} className="text-xs" />
               </div>
             </SidebarGroupContent>
           </SidebarGroup>

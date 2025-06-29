@@ -330,7 +330,7 @@ const Index = () => {
               <StatusBar
                 userStats={userStats}
                 progress={progress}
-                canSpin={canSpin() && canUseDaily('spinUsed')}
+                canSpin={() => canSpin() && canUseDaily('spinUsed')}
                 todayCompletionPercentage={todayCompletionPercentage}
                 onSpinClick={() => setShowSpinWheel(true)}
               />
@@ -457,7 +457,7 @@ const Index = () => {
 
             {activeTab === 'spin-wheel' && (
               <SpinWheelCenter 
-                canSpin={canSpin() && canUseDaily('spinUsed')}
+                canSpin={() => canSpin() && canUseDaily('spinUsed')}
                 todayCompletionPercentage={todayCompletionPercentage}
                 onSpin={() => setShowSpinWheel(true)}
               />
