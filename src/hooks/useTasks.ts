@@ -52,6 +52,7 @@ export function useTasks() {
           dueDate: futureDate,
           completed: false,
           completedAt: undefined,
+          isRoutine: true, // Mark as routine task
         });
       }
       

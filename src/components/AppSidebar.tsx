@@ -12,11 +12,20 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon } from 'lucide-react';
+import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon, Backpack } from 'lucide-react';
+import { Avatar } from './Avatar';
+import { XPBar } from './XPBar';
 
 interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  progress?: {
+    totalXP: number;
+    level: number;
+    currentStreak: number;
+    maxStreak: number;
+    lastCompletionDate?: Date;
+  };
 }
 
 const mainItems = [
@@ -36,26 +45,80 @@ const planningItems = [
 const trackingItems = [
   { title: 'Sleep Tracker', value: 'sleep', icon: Moon },
   { title: 'Wellness', value: 'wellness', icon: Heart },
+  { title: 'Habit Performance', value: 'habit-performance', icon: BarChart3 },
 ];
 
 const gameItems = [
   { title: 'Spin Wheel', value: 'spin-wheel', icon: Zap },
   { title: 'Trophies', value: 'trophies', icon: Trophy },
-  { title: 'Power-ups', value: 'powerups', icon: Zap },
-  { title: 'Avatar', value: 'avatar', icon: User },
-  { title: 'Profile', value: 'profile', icon: User },
+  { title: 'Inventory', value: 'inventory', icon: Backpack },
 ];
 
-export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
+export function AppSidebar({ activeTab, onTabChange, progress }: AppSidebarProps) {
   const { state } = useSidebar();
 
   const handleTabClick = (tab: string) => {
     onTabChange(tab);
   };
 
+  // Default progress if not provided
+  const defaultProgress = {
+    totalXP: 0,
+    level: 1,
+    currentStreak: 0,
+    maxStreak: 0,
+  };
+
+  const currentProgress = progress || defaultProgress;
+
   return (
     <Sidebar className={state === "collapsed" ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent>
+        {/* User Profile Section - At the top */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Profile</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleTabClick('profile')}
+                  className={activeTab === 'profile' ? 'bg-accent text-accent-foreground' : ''}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  {state !== "collapsed" && <span>Profile</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleTabClick('avatar')}
+                  className={activeTab === 'avatar' ? 'bg-accent text-accent-foreground' : ''}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  {state !== "collapsed" && <span>Avatar</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Avatar and Progress Section */}
+        {state !== "collapsed" && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <div className="px-2 py-4 space-y-3">
+                <div className="flex justify-center">
+                  <Avatar progress={currentProgress} size="medium" showDetails={false} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium">Level {currentProgress.level}</p>
+                  <p className="text-xs text-muted-foreground">{currentProgress.totalXP} XP</p>
+                </div>
+                <XPBar progress={currentProgress} compact />
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         {/* Main Tasks */}
         <SidebarGroup>
           <SidebarGroupLabel>Tasks</SidebarGroupLabel>

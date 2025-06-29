@@ -43,6 +43,7 @@ import { MonthlyTasksView } from '../components/MonthlyTasksView';
 import { RoutineBuilder } from '../components/RoutineBuilder';
 import { ProjectManager } from '../components/ProjectManager';
 import { SleepTracker } from '../components/SleepTracker';
+import { HabitPerformanceTracker } from '../components/HabitPerformanceTracker';
 
 const Index = () => {
   const { 
@@ -166,7 +167,7 @@ const Index = () => {
     completeTask(id);
     
     const completionPercentage = getTodayCompletionPercentage();
-    if (completionPercentage === 100 && canSpin()) {
+    if (completionPercentage === 100 && canSpin() && canUseDaily('spinUsed')) {
       setTimeout(() => setShowSpinWheel(true), 1000);
     }
   };
@@ -264,7 +265,7 @@ const Index = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen bg-background transition-colors duration-300 flex w-full">
-        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} progress={progress} />
         
         <div className="flex-1 flex flex-col min-w-0">
           {/* Enhanced Mobile-First Header */}
@@ -329,7 +330,7 @@ const Index = () => {
               <StatusBar
                 userStats={userStats}
                 progress={progress}
-                canSpin={canSpin}
+                canSpin={canSpin() && canUseDaily('spinUsed')}
                 todayCompletionPercentage={todayCompletionPercentage}
                 onSpinClick={() => setShowSpinWheel(true)}
               />
@@ -456,7 +457,7 @@ const Index = () => {
 
             {activeTab === 'spin-wheel' && (
               <SpinWheelCenter 
-                canSpin={canSpin}
+                canSpin={canSpin() && canUseDaily('spinUsed')}
                 todayCompletionPercentage={todayCompletionPercentage}
                 onSpin={() => setShowSpinWheel(true)}
               />
@@ -501,7 +502,13 @@ const Index = () => {
               </div>
             )}
 
-            {activeTab === 'powerups' && (
+            {activeTab === 'habit-performance' && (
+              <div className="animate-fade-in">
+                <HabitPerformanceTracker />
+              </div>
+            )}
+
+            {activeTab === 'inventory' && (
               <div className="animate-fade-in">
                 <Inventory 
                   powerUps={userStats.powerUps}

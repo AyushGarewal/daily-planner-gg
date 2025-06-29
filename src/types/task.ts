@@ -13,6 +13,7 @@ export interface Task {
   completedAt?: Date;
   taskType: 'normal' | 'surplus';
   failed?: boolean;
+  isRoutine?: boolean;
 }
 
 export interface Subtask {
@@ -48,28 +49,28 @@ export const CATEGORIES = [
   'Other'
 ];
 
-// New flexible level progression system
+// New flexible level progression system - easier early levels
 export const LEVEL_XP_REQUIREMENTS = [
   0,    // Level 1
-  100,  // Level 2
-  250,  // Level 3
-  450,  // Level 4
-  700,  // Level 5
-  1000, // Level 6
-  1350, // Level 7
-  1750, // Level 8
-  2200, // Level 9
-  2700, // Level 10
-  3250, // Level 11
-  3850, // Level 12
-  4500, // Level 13
-  5200, // Level 14
-  5950, // Level 15
-  6750, // Level 16
-  7600, // Level 17
-  8500, // Level 18
-  9450, // Level 19
-  10450 // Level 20
+  50,   // Level 2 - easier
+  120,  // Level 3 - easier
+  220,  // Level 4 - easier
+  350,  // Level 5 - easier
+  520,  // Level 6 - easier
+  730,  // Level 7 - easier
+  980,  // Level 8 - easier
+  1270, // Level 9 - easier
+  1600, // Level 10 - easier
+  2000, // Level 11
+  2450, // Level 12
+  2950, // Level 13
+  3500, // Level 14
+  4100, // Level 15
+  4750, // Level 16
+  5450, // Level 17
+  6200, // Level 18
+  7000, // Level 19
+  7850  // Level 20
 ];
 
 export const getXPRequiredForLevel = (level: number): number => {
