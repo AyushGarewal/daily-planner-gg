@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User, Menu, Palette } from 'lucide-react';
+import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User, Menu, Palette, Clock, FolderOpen } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 import { useAchievements } from '../hooks/useAchievements';
 import { TaskForm } from '../components/TaskForm';
@@ -40,6 +40,9 @@ import { UnifiedTrophyRoom } from '../components/UnifiedTrophyRoom';
 import { EnhancedCustomTrophyManager } from '../components/EnhancedCustomTrophyManager';
 import { CustomChallenges } from '../components/CustomChallenges';
 import { MonthlyTasksView } from '../components/MonthlyTasksView';
+import { RoutineBuilder } from '../components/RoutineBuilder';
+import { ProjectManager } from '../components/ProjectManager';
+import { SleepTracker } from '../components/SleepTracker';
 
 const Index = () => {
   const { 
@@ -430,6 +433,24 @@ const Index = () => {
             {activeTab === 'challenges' && (
               <div className="animate-fade-in">
                 <CustomChallenges />
+              </div>
+            )}
+
+            {activeTab === 'routines' && (
+              <div className="animate-fade-in">
+                <RoutineBuilder />
+              </div>
+            )}
+
+            {activeTab === 'projects' && (
+              <div className="animate-fade-in">
+                <ProjectManager />
+              </div>
+            )}
+
+            {activeTab === 'sleep' && (
+              <div className="animate-fade-in">
+                <SleepTracker />
               </div>
             )}
 

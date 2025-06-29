@@ -1,28 +1,18 @@
 
 import React from 'react';
-import { 
-  Sidebar, 
-  SidebarContent, 
-  SidebarGroup, 
-  SidebarGroupContent, 
-  SidebarGroupLabel, 
-  SidebarMenu, 
-  SidebarMenuButton, 
+import { NavLink, useLocation } from 'react-router-dom';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar
+  useSidebar,
 } from '@/components/ui/sidebar';
-import { 
-  Calendar, 
-  List, 
-  BarChart3, 
-  Heart, 
-  Trophy, 
-  Zap, 
-  Gift, 
-  User, 
-  Target,
-  CalendarDays
-} from 'lucide-react';
+import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon } from 'lucide-react';
 
 interface AppSidebarProps {
   activeTab: string;
@@ -30,68 +20,119 @@ interface AppSidebarProps {
 }
 
 const mainItems = [
-  { id: 'today', title: 'Today', icon: Calendar },
-  { id: 'week', title: 'This Week', icon: CalendarDays },
-  { id: 'monthly', title: 'Monthly View', icon: Calendar },
-  { id: 'all', title: 'All Tasks', icon: List },
+  { title: 'Today', value: 'today', icon: Sun },
+  { title: 'This Week', value: 'week', icon: Calendar },
+  { title: 'Monthly', value: 'monthly', icon: Calendar },
+  { title: 'All Tasks', value: 'all', icon: List },
 ];
 
-const featuresItems = [
-  { id: 'long-term-goals', title: 'Long-term Goals', icon: Target },
-  { id: 'challenges', title: 'Custom Challenges', icon: Target },
-  { id: 'spin-wheel', title: 'Daily Spin', icon: Gift },
-  { id: 'wellness', title: 'Wellness', icon: Heart },
+const planningItems = [
+  { title: 'Long-term Goals', value: 'long-term-goals', icon: BarChart3 },
+  { title: 'Routines', value: 'routines', icon: Clock },
+  { title: 'Projects', value: 'projects', icon: FolderOpen },
+  { title: 'Challenges', value: 'challenges', icon: Trophy },
 ];
 
-const gamificationItems = [
-  { id: 'trophies', title: 'Trophies', icon: Trophy },
-  { id: 'powerups', title: 'Power-ups', icon: Zap },
-  { id: 'profile', title: 'Profile', icon: User },
-  { id: 'avatar', title: 'Avatar', icon: User },
+const trackingItems = [
+  { title: 'Sleep Tracker', value: 'sleep', icon: Moon },
+  { title: 'Wellness', value: 'wellness', icon: Heart },
+];
+
+const gameItems = [
+  { title: 'Spin Wheel', value: 'spin-wheel', icon: Zap },
+  { title: 'Trophies', value: 'trophies', icon: Trophy },
+  { title: 'Power-ups', value: 'powerups', icon: Zap },
+  { title: 'Avatar', value: 'avatar', icon: User },
+  { title: 'Profile', value: 'profile', icon: User },
 ];
 
 export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
-  const { state } = useSidebar();
-  const isCollapsed = state === 'collapsed';
+  const { collapsed } = useSidebar();
 
-  const renderMenuItems = (items: typeof mainItems) => (
-    <SidebarMenu>
-      {items.map((item) => (
-        <SidebarMenuItem key={item.id}>
-          <SidebarMenuButton 
-            onClick={() => onTabChange(item.id)}
-            isActive={activeTab === item.id}
-            className={activeTab === item.id ? 'bg-primary text-primary-foreground' : ''}
-          >
-            <item.icon className="h-4 w-4" />
-            {!isCollapsed && <span>{item.title}</span>}
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
-  );
+  const handleTabClick = (tab: string) => {
+    onTabChange(tab);
+  };
 
   return (
-    <Sidebar className={isCollapsed ? "w-14" : "w-60"} collapsible="icon">
+    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
       <SidebarContent>
+        {/* Main Tasks */}
         <SidebarGroup>
           <SidebarGroupLabel>Tasks</SidebarGroupLabel>
           <SidebarGroupContent>
-            {renderMenuItems(mainItems)}
+            <SidebarMenu>
+              {mainItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleTabClick(item.value)}
+                    className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Planning & Organization */}
         <SidebarGroup>
-          <SidebarGroupLabel>Features</SidebarGroupLabel>
+          <SidebarGroupLabel>Planning</SidebarGroupLabel>
           <SidebarGroupContent>
-            {renderMenuItems(featuresItems)}
+            <SidebarMenu>
+              {planningItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleTabClick(item.value)}
+                    className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Health & Tracking */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Tracking</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {trackingItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleTabClick(item.value)}
+                    className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Gamification */}
         <SidebarGroup>
           <SidebarGroupLabel>Gamification</SidebarGroupLabel>
           <SidebarGroupContent>
-            {renderMenuItems(gamificationItems)}
+            <SidebarMenu>
+              {gameItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleTabClick(item.value)}
+                    className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

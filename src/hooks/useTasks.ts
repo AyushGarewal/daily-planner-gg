@@ -36,16 +36,16 @@ export function useTasks() {
     const today = startOfDay(new Date());
     const taskDate = startOfDay(new Date(baseTask.dueDate));
     
-    // For daily recurring tasks, generate future tasks including today if not already created
+    // For daily recurring tasks, generate future tasks
     if (baseTask.recurrence === 'Daily') {
       const futureTasks: Task[] = [];
       
-      // Start from tomorrow if task is for today, or from the task date if it's in the future
-      const startDate = isSameDay(taskDate, today) ? addDays(taskDate, 1) : taskDate;
+      // Start from tomorrow (the original task already handles today)
+      const startDate = addDays(taskDate, 1);
       
-      // Generate next 30 days of recurring tasks (excluding the original task day)
-      for (let i = 1; i <= 30; i++) {
-        const futureDate = addDays(startDate, i - 1);
+      // Generate next 30 days of recurring tasks
+      for (let i = 0; i < 30; i++) {
+        const futureDate = addDays(startDate, i);
         futureTasks.push({
           ...baseTask,
           id: crypto.randomUUID(),
