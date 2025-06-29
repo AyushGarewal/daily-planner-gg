@@ -44,6 +44,7 @@ import { RoutineBuilder } from '../components/RoutineBuilder';
 import { ProjectManager } from '../components/ProjectManager';
 import { SleepTracker } from '../components/SleepTracker';
 import { HabitPerformanceTracker } from '../components/HabitPerformanceTracker';
+import { ChallengeManager } from '../components/ChallengeManager';
 
 const Index = () => {
   const { 
@@ -56,6 +57,7 @@ const Index = () => {
     updateTask, 
     deleteTask, 
     completeTask,
+    toggleSubtask,
     addBonusXP,
     canUseDaily,
     markDailyUsed,
@@ -172,6 +174,10 @@ const Index = () => {
     }
   };
 
+  const handleSubtaskToggle = (taskId: string, subtaskId: string) => {
+    toggleSubtask(taskId, subtaskId);
+  };
+
   const handleSpinReward = (reward: SpinReward) => {
     recordSpin();
     markDailyUsed('spinUsed');
@@ -246,6 +252,7 @@ const Index = () => {
 
   const visibleTodaysTasks = getVisibleTodaysTasks();
   const todayCompletionPercentage = getTodayCompletionPercentage();
+  const hasSpunToday = !canUseDaily('spinUsed');
 
   // Get this week's days for weekly view
   const today = new Date();
@@ -325,6 +332,15 @@ const Index = () => {
               <XPBar progress={progress} />
             </div>
 
+            {/* Spin Wheel Status */}
+            <div className="mb-4 sm:mb-6">
+              <SpinWheelStatus
+                canSpin={canSpin() && canUseDaily('spinUsed')}
+                todayCompletionPercentage={todayCompletionPercentage}
+                hasSpunToday={hasSpunToday}
+              />
+            </div>
+
             {/* Status Bar - Mobile optimized */}
             <div className="mb-4 sm:mb-6">
               <StatusBar
@@ -371,6 +387,7 @@ const Index = () => {
                           onComplete={handleCompleteTask}
                           onEdit={setEditingTask}
                           onDelete={deleteTask}
+                          onSubtaskToggle={handleSubtaskToggle}
                         />
                       </div>
                     ))}
@@ -408,6 +425,7 @@ const Index = () => {
                                 onComplete={handleCompleteTask}
                                 onEdit={setEditingTask}
                                 onDelete={deleteTask}
+                                onSubtaskToggle={handleSubtaskToggle}
                               />
                             ))}
                           </div>
@@ -433,7 +451,7 @@ const Index = () => {
 
             {activeTab === 'challenges' && (
               <div className="animate-fade-in">
-                <CustomChallenges />
+                <ChallengeManager />
               </div>
             )}
 
@@ -564,6 +582,7 @@ const Index = () => {
                           onComplete={handleCompleteTask}
                           onEdit={setEditingTask}
                           onDelete={deleteTask}
+                          onSubtaskToggle={handleSubtaskToggle}
                         />
                       </div>
                     ))}

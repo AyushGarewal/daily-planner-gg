@@ -14,6 +14,8 @@ export interface Task {
   taskType: 'normal' | 'surplus';
   failed?: boolean;
   isRoutine?: boolean;
+  type: 'task' | 'habit'; // New field to distinguish tasks from habits
+  weekDays?: number[]; // For habits - which days of week to repeat
 }
 
 export interface Subtask {
