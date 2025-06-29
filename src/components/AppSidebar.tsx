@@ -47,14 +47,14 @@ const gameItems = [
 ];
 
 export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
 
   const handleTabClick = (tab: string) => {
     onTabChange(tab);
   };
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
+    <Sidebar className={state === "collapsed" ? "w-14" : "w-64"} collapsible="icon">
       <SidebarContent>
         {/* Main Tasks */}
         <SidebarGroup>
@@ -68,7 +68,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                     className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
                   >
                     <item.icon className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {state !== "collapsed" && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -88,7 +88,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                     className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
                   >
                     <item.icon className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {state !== "collapsed" && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -108,7 +108,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                     className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
                   >
                     <item.icon className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {state !== "collapsed" && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -128,7 +128,7 @@ export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
                     className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
                   >
                     <item.icon className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
+                    {state !== "collapsed" && <span>{item.title}</span>}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

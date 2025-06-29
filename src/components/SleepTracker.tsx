@@ -21,7 +21,7 @@ export function SleepTracker() {
     date: format(new Date(), 'yyyy-MM-dd'),
     bedtime: '23:00',
     wakeTime: '07:00',
-    sleepQuality: 'good' as const,
+    sleepQuality: 'good' as SleepRecord['sleepQuality'],
     notes: '',
   });
 
@@ -225,9 +225,9 @@ export function SleepTracker() {
               <div>
                 <label className="text-sm font-medium">Sleep Quality</label>
                 <Select
-                  value={sleepForm.sleepQuality}
+                  value={sleepForm.sleepQuality || 'good'}
                   onValueChange={(value: SleepRecord['sleepQuality']) => 
-                    setSleepForm({ ...sleepForm, sleepQuality: value! })
+                    setSleepForm({ ...sleepForm, sleepQuality: value })
                   }
                 >
                   <SelectTrigger>

@@ -28,7 +28,7 @@ export function ProjectManager() {
   const [projectForm, setProjectForm] = useState({
     name: '',
     description: '',
-    category: 'short-term' as const,
+    category: 'short-term' as Project['category'],
     startDate: undefined as Date | undefined,
     targetDate: undefined as Date | undefined,
     color: PROJECT_COLORS[0],

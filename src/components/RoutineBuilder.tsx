@@ -319,7 +319,7 @@ export function RoutineBuilder() {
                 ))}
                 
                 <Button
-                  variant="dashed"
+                  variant="outline"
                   className="w-full"
                   onClick={() => {
                     setCurrentRoutineId(routine.id);
