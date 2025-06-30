@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { CalendarIcon, Plus, X, FolderOpen, Target } from 'lucide-react';
 import { format } from 'date-fns';
 import { Task, CATEGORIES, Subtask } from '../types/task';
 import { TaskTypeSelector } from './TaskTypeSelector';
@@ -131,6 +131,9 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
     );
   }
 
+  const selectedProject = projects.find((p: any) => p.id === projectId);
+  const selectedGoal = goals.find(g => g.id === goalId);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
       {!initialTask && (
@@ -199,41 +202,81 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
         </div>
       </div>
 
-      {/* Project and Goal Linking */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Link to Project</label>
-          <Select value={projectId} onValueChange={setProjectId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select project (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No project</SelectItem>
-              {projects.map((project: any) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Enhanced Project and Goal Linking */}
+      <div className="grid grid-cols-1 gap-4 p-4 border rounded-lg bg-muted/20">
+        <h3 className="text-sm font-semibold mb-2">Link to Projects & Goals</h3>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <FolderOpen className="h-4 w-4" />
+              Link to Project
+            </label>
+            <Select value={projectId} onValueChange={setProjectId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select project (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No project</SelectItem>
+                {projects.map((project: any) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${project.color || 'bg-gray-400'}`}></div>
+                      {project.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedProject && (
+              <div className="mt-1">
+                <Badge variant="outline" className="text-xs">
+                  <FolderOpen className="h-3 w-3 mr-1" />
+                  {selectedProject.name}
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <Target className="h-4 w-4" />
+              Link to Goal
+            </label>
+            <Select value={goalId} onValueChange={setGoalId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select goal (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No goal</SelectItem>
+                {goals.map((goal) => (
+                  <SelectItem key={goal.id} value={goal.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="truncate">{goal.title}</span>
+                      <Badge variant="outline" className="text-xs ml-2">
+                        {goal.category}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedGoal && (
+              <div className="mt-1">
+                <Badge variant="outline" className="text-xs">
+                  <Target className="h-3 w-3 mr-1" />
+                  {selectedGoal.title}
+                </Badge>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Link to Goal</label>
-          <Select value={goalId} onValueChange={setGoalId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select goal (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No goal</SelectItem>
-              {goals.map((goal) => (
-                <SelectItem key={goal.id} value={goal.id}>
-                  {goal.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {(selectedProject || selectedGoal) && (
+          <div className="text-xs text-muted-foreground mt-2 p-2 bg-blue-50 rounded border-l-2 border-blue-200">
+            💡 This {taskType} will contribute to {selectedProject ? `project "${selectedProject.name}"` : ''}{selectedProject && selectedGoal ? ' and ' : ''}{selectedGoal ? `goal "${selectedGoal.title}"` : ''}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
@@ -46,7 +47,9 @@ import { ProjectManager } from '../components/ProjectManager';
 import { SleepTracker } from '../components/SleepTracker';
 import { HabitPerformanceTracker } from '../components/HabitPerformanceTracker';
 import { ChallengeManager } from '../components/ChallengeManager';
-import { DailyReflectionForm } from '../components/DailyReflectionForm';
+import { EnhancedDailyReflectionForm } from '../components/EnhancedDailyReflectionForm';
+import { ChallengeTemplates } from '../components/ChallengeTemplates';
+import { EnhancedHabitPerformanceCalendar } from '../components/EnhancedHabitPerformanceCalendar';
 import { useDataReset } from '../hooks/useDataReset';
 
 const Index = () => {
@@ -286,6 +289,18 @@ const Index = () => {
 
   const availableThemes = THEMES.filter(theme => theme.unlockLevel <= progress.level);
 
+  // Filter tasks by project for display
+  const getTasksWithProjects = (taskList: Task[]) => {
+    return taskList.map(task => {
+      if (task.projectId) {
+        const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+        const project = projects.find((p: any) => p.id === task.projectId);
+        return { ...task, projectName: project?.name };
+      }
+      return task;
+    });
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen bg-background transition-colors duration-300 flex w-full">
@@ -410,7 +425,7 @@ const Index = () => {
                   </div>
                 ) : (
                   <div className="grid gap-3 sm:gap-4">
-                    {visibleTodaysTasks.map((task) => (
+                    {getTasksWithProjects(visibleTodaysTasks).map((task) => (
                       <div key={task.id} className="transform transition-all duration-200 hover:scale-[1.01]">
                         <TaskCard
                           task={task}
@@ -448,7 +463,7 @@ const Index = () => {
                           <p className="text-sm text-muted-foreground">No tasks scheduled</p>
                         ) : (
                           <div className="space-y-2">
-                            {dayTasks.map((task) => (
+                            {getTasksWithProjects(dayTasks).map((task) => (
                               <TaskCard
                                 key={task.id}
                                 task={task}
@@ -481,7 +496,20 @@ const Index = () => {
 
             {activeTab === 'challenges' && (
               <div className="animate-fade-in">
-                <ChallengeManager />
+                <Tabs defaultValue="templates" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="templates">Challenge Templates</TabsTrigger>
+                    <TabsTrigger value="manager">Challenge Manager</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="templates">
+                    <ChallengeTemplates />
+                  </TabsContent>
+                  
+                  <TabsContent value="manager">
+                    <ChallengeManager />
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
 
@@ -552,7 +580,20 @@ const Index = () => {
 
             {activeTab === 'habit-performance' && (
               <div className="animate-fade-in">
-                <HabitPerformanceTracker />
+                <Tabs defaultValue="tracker" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="tracker">Performance Tracker</TabsTrigger>
+                    <TabsTrigger value="calendar">Performance Calendar</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="tracker">
+                    <HabitPerformanceTracker />
+                  </TabsContent>
+                  
+                  <TabsContent value="calendar">
+                    <EnhancedHabitPerformanceCalendar />
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
 
@@ -605,7 +646,7 @@ const Index = () => {
                   </div>
                 ) : (
                   <div className="grid gap-3 sm:gap-4">
-                    {finalTasks.map((task) => (
+                    {getTasksWithProjects(finalTasks).map((task) => (
                       <div key={task.id} className="transform transition-all duration-200 hover:scale-[1.01]">
                         <TaskCard
                           task={task}
@@ -623,7 +664,7 @@ const Index = () => {
 
             {activeTab === 'reflections' && (
               <div className="animate-fade-in">
-                <DailyReflectionForm />
+                <EnhancedDailyReflectionForm />
               </div>
             )}
           </main>

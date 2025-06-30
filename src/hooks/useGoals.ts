@@ -15,7 +15,8 @@ export function useGoals() {
       id: `goal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       isCompleted: false,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      currentProgress: 0
     };
     setGoals(prev => [...prev, newGoal]);
     return newGoal;
@@ -87,6 +88,7 @@ export function useGoals() {
   };
 
   const getGoalProgress = (goalId: string): GoalProgress => {
+    const goal = goals.find(g => g.id === goalId);
     const goalMilestones = milestones.filter(m => m.goalId === goalId);
     const goalMilestoneIds = goalMilestones.map(m => m.id);
     const goalSubtasks = subtasks.filter(s => goalMilestoneIds.includes(s.milestoneId));
@@ -99,8 +101,28 @@ export function useGoals() {
       goalId,
       totalSubtasks,
       completedSubtasks,
-      percentage
+      percentage,
+      numericProgress: goal?.currentProgress || 0,
+      numericTarget: goal?.numericTarget
     };
+  };
+
+  const updateGoalProgress = (goalId: string, progress: number) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (goal && goal.hasNumericTarget) {
+      updateGoal(goalId, { 
+        currentProgress: Math.min(progress, goal.numericTarget || 0),
+        isCompleted: progress >= (goal.numericTarget || 0)
+      });
+    }
+  };
+
+  const incrementGoalProgress = (goalId: string, amount: number = 1) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (goal && goal.hasNumericTarget) {
+      const newProgress = (goal.currentProgress || 0) + amount;
+      updateGoalProgress(goalId, newProgress);
+    }
   };
 
   const getMilestonesForGoal = (goalId: string) => {
@@ -128,6 +150,8 @@ export function useGoals() {
     addSubtask,
     updateSubtask,
     getGoalProgress,
+    updateGoalProgress,
+    incrementGoalProgress,
     getMilestonesForGoal,
     getSubtasksForMilestone,
     getJournalEntriesForGoal

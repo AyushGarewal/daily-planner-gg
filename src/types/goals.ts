@@ -9,6 +9,13 @@ export interface Goal {
   isCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // New numeric target feature
+  hasNumericTarget?: boolean;
+  numericTarget?: number;
+  currentProgress?: number;
+  targetUnit?: string; // e.g., "times", "hours", "pages"
+  linkedTaskIds?: string[];
+  linkedHabitIds?: string[];
 }
 
 export interface GoalJournalEntry {
@@ -44,4 +51,6 @@ export interface GoalProgress {
   totalSubtasks: number;
   completedSubtasks: number;
   percentage: number;
+  numericProgress?: number;
+  numericTarget?: number;
 }
