@@ -10,6 +10,14 @@ export interface CustomCategory {
   created_at: Date;
 }
 
+// Define the Supabase response type
+interface SupabaseCustomCategory {
+  id: string;
+  name: string;
+  type: string;
+  created_at: string;
+}
+
 export function useCustomCategories() {
   const [categories, setCategories] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +34,16 @@ export function useCustomCategories() {
         .order('name');
 
       if (error) throw error;
-      setCategories(data || []);
+      
+      // Transform Supabase data to match our interface
+      const transformedData: CustomCategory[] = (data || []).map((item: SupabaseCustomCategory) => ({
+        id: item.id,
+        name: item.name,
+        type: item.type as 'task' | 'habit' | 'project' | 'goal',
+        created_at: new Date(item.created_at)
+      }));
+      
+      setCategories(transformedData);
     } catch (error) {
       console.error('Error loading categories:', error);
       // Fallback to localStorage if Supabase fails
@@ -47,8 +64,16 @@ export function useCustomCategories() {
 
       if (error) throw error;
       
-      setCategories(prev => [...prev, data]);
-      return data;
+      // Transform the response data
+      const transformedData: CustomCategory = {
+        id: data.id,
+        name: data.name,
+        type: data.type as 'task' | 'habit' | 'project' | 'goal',
+        created_at: new Date(data.created_at)
+      };
+      
+      setCategories(prev => [...prev, transformedData]);
+      return transformedData;
     } catch (error) {
       console.error('Error adding category:', error);
       
