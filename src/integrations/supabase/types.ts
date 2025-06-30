@@ -9,13 +9,153 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      challenges: {
+        Row: {
+          badge_name: string | null
+          completed_at: string | null
+          condition_duration: number | null
+          condition_target: number
+          condition_type: string
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          is_completed: boolean | null
+          progress: number | null
+          start_date: string
+          title: string
+          user_id: string
+          xp_reward: number | null
+        }
+        Insert: {
+          badge_name?: string | null
+          completed_at?: string | null
+          condition_duration?: number | null
+          condition_target: number
+          condition_type: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          progress?: number | null
+          start_date?: string
+          title: string
+          user_id: string
+          xp_reward?: number | null
+        }
+        Update: {
+          badge_name?: string | null
+          completed_at?: string | null
+          condition_duration?: number | null
+          condition_target?: number
+          condition_type?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          progress?: number | null
+          start_date?: string
+          title?: string
+          user_id?: string
+          xp_reward?: number | null
+        }
+        Relationships: []
+      }
+      custom_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      daily_reflections: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          mood: number | null
+          reflection_date: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          mood?: number | null
+          reflection_date: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          mood?: number | null
+          reflection_date?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          project_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reset_user_data: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

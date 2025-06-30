@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -47,6 +46,8 @@ import { ProjectManager } from '../components/ProjectManager';
 import { SleepTracker } from '../components/SleepTracker';
 import { HabitPerformanceTracker } from '../components/HabitPerformanceTracker';
 import { ChallengeManager } from '../components/ChallengeManager';
+import { DailyReflectionForm } from '../components/DailyReflectionForm';
+import { useDataReset } from '../hooks/useDataReset';
 
 const Index = () => {
   const { 
@@ -102,6 +103,8 @@ const Index = () => {
     completed?: boolean;
   }>({});
   const [sortBy, setSortBy] = useState<'dueDate' | 'xpValue' | 'priority'>('dueDate');
+
+  const { confirmReset } = useDataReset();
 
   // Check for achievements whenever tasks or progress change
   React.useEffect(() => {
@@ -301,6 +304,16 @@ const Index = () => {
                 <div className="hidden sm:block">
                   <Avatar progress={progress} size="small" showDetails={true} />
                 </div>
+                
+                {/* Reset Button */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={confirmReset}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  Reset All
+                </Button>
                 
                 {/* Theme Toggle */}
                 <ThemeSelector currentTheme={currentTheme} onThemeChange={handleThemeChange} />
@@ -590,6 +603,12 @@ const Index = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'reflections' && (
+              <div className="animate-fade-in">
+                <DailyReflectionForm />
               </div>
             )}
           </main>
