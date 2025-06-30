@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Plus, Calendar, List, BarChart3, Heart, Trophy, Zap, Gift, Sun, Moon, User, Menu, Palette, Clock, FolderOpen } from 'lucide-react';
@@ -159,13 +159,25 @@ const Index = () => {
   };
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
-    addTask(taskData);
+    // Handle projectId and goalId being "none" 
+    const cleanedTaskData = {
+      ...taskData,
+      projectId: taskData.projectId === 'none' ? undefined : taskData.projectId,
+      goalId: taskData.goalId === 'none' ? undefined : taskData.goalId,
+    };
+    addTask(cleanedTaskData);
     setIsFormOpen(false);
   };
 
   const handleEditTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     if (editingTask) {
-      updateTask(editingTask.id, taskData);
+      // Handle projectId and goalId being "none"
+      const cleanedTaskData = {
+        ...taskData,
+        projectId: taskData.projectId === 'none' ? undefined : taskData.projectId,
+        goalId: taskData.goalId === 'none' ? undefined : taskData.goalId,
+      };
+      updateTask(editingTask.id, cleanedTaskData);
       setEditingTask(null);
     }
   };
@@ -329,6 +341,9 @@ const Index = () => {
                   <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4">
                     <DialogHeader>
                       <DialogTitle>Add New Task</DialogTitle>
+                      <DialogDescription>
+                        Create a new task or habit to add to your productivity journey.
+                      </DialogDescription>
                     </DialogHeader>
                     <TaskForm
                       onSubmit={handleAddTask}
@@ -619,6 +634,9 @@ const Index = () => {
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
               <DialogTitle>Edit Task</DialogTitle>
+              <DialogDescription>
+                Make changes to your task or habit.
+              </DialogDescription>
             </DialogHeader>
             {editingTask && (
               <TaskForm

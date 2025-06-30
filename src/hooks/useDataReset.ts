@@ -20,7 +20,7 @@ export function useDataReset() {
       console.error('Error resetting remote data:', error);
     }
 
-    // Reset all localStorage data
+    // Reset all localStorage data - comprehensive list
     const keysToReset = [
       'tasks',
       'userProgress',
@@ -38,14 +38,32 @@ export function useDataReset() {
       'sleepData',
       'achievements',
       'routines',
-      'longTermGoalsProgress'
+      'longTermGoalsProgress',
+      'habitData',
+      'habitStreaks',
+      'weeklyData',
+      'monthlyData',
+      'trophies',
+      'customTrophies',
+      'powerUps',
+      'inventory',
+      'streakShields',
+      'completedTasks',
+      'failedTasks',
+      'xpHistory',
+      'levelHistory',
+      'motivationQuotes',
+      'app-theme',
+      'userPreferences',
+      'gameSettings',
+      'notificationSettings'
     ];
 
     keysToReset.forEach(key => {
       localStorage.removeItem(key);
     });
 
-    // Reset to initial values
+    // Reset to initial values with proper defaults
     localStorage.setItem('userProgress', JSON.stringify({
       totalXP: 0,
       level: 1,
@@ -61,6 +79,16 @@ export function useDataReset() {
       customTrophies: []
     }));
 
+    localStorage.setItem('app-theme', 'light');
+
+    // Clear any remaining app-specific localStorage items
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('task-') || key.startsWith('habit-') || key.startsWith('goal-') || key.startsWith('project-'))) {
+        localStorage.removeItem(key);
+      }
+    }
+
     // Reload the page to apply changes
     window.location.reload();
   };
@@ -73,6 +101,9 @@ export function useDataReset() {
       '• Projects and goals\n' +
       '• Daily reflections\n' +
       '• Achievements and trophies\n' +
+      '• Custom categories\n' +
+      '• Routines and challenges\n' +
+      '• Theme and preferences\n' +
       '• All other app data\n\n' +
       'This action cannot be undone!'
     );

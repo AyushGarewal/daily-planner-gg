@@ -208,7 +208,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
               <SelectValue placeholder="Select project (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No project</SelectItem>
+              <SelectItem value="none">No project</SelectItem>
               {projects.map((project: any) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}
@@ -225,7 +225,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
               <SelectValue placeholder="Select goal (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No goal</SelectItem>
+              <SelectItem value="none">No goal</SelectItem>
               {goals.map((goal) => (
                 <SelectItem key={goal.id} value={goal.id}>
                   {goal.title}
