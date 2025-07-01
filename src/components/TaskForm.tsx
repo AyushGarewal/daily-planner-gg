@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,11 +47,27 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
   const [useCustomCat, setUseCustomCat] = useState(!!initialTask?.customCategory);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  // Get projects from localStorage
-  const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+  // Get projects from localStorage with error handling
+  const getProjects = () => {
+    try {
+      return JSON.parse(localStorage.getItem('projects') || '[]');
+    } catch {
+      return [];
+    }
+  };
   
-  // Get custom categories for this task type
-  const customCategories = getCategoriesByType(taskType);
+  const projects = getProjects();
+  
+  // Get custom categories for this task type with error handling
+  const getCustomCategoriesSafe = () => {
+    try {
+      return getCategoriesByType(taskType);
+    } catch {
+      return [];
+    }
+  };
+  
+  const customCategories = getCustomCategoriesSafe();
 
   const addSubtask = () => {
     if (newSubtask.trim()) {
@@ -69,9 +86,13 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
 
   const handleAddCustomCategory = async () => {
     if (newCategoryName.trim()) {
-      await addCategory(newCategoryName.trim(), taskType);
-      setCustomCategory(newCategoryName.trim());
-      setNewCategoryName('');
+      try {
+        await addCategory(newCategoryName.trim(), taskType);
+        setCustomCategory(newCategoryName.trim());
+        setNewCategoryName('');
+      } catch (error) {
+        console.error('Error adding custom category:', error);
+      }
     }
   };
 
@@ -79,7 +100,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
     e.preventDefault();
     if (!title.trim()) return;
 
-    // If it's a habit with weekly recurrence, ensure weekdays are selected
+    // Validation for weekly habits
     if (taskType === 'habit' && recurrence === 'Weekly' && weekDays.length === 0) {
       alert('Please select at least one day for weekly habits');
       return;
@@ -88,11 +109,10 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
     // Set appropriate due date for habits created today
     const submissionDate = new Date(dueDate);
     if (taskType === 'habit' && recurrence === 'Daily') {
-      // For daily habits, start today
       submissionDate.setHours(new Date().getHours(), new Date().getMinutes());
     }
 
-    onSubmit({
+    const taskData = {
       title: title.trim(),
       description: description.trim(),
       subtasks,
@@ -107,18 +127,22 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
       weekDays: taskType === 'habit' && recurrence === 'Weekly' ? weekDays : undefined,
       projectId: projectId || undefined,
       goalId: goalId || undefined,
-    });
+    };
+
+    console.log('Submitting task data:', taskData);
+    onSubmit(taskData);
   };
 
+  // Early return for type selector
   if (showTypeSelector && !initialTask) {
     return (
       <div className="space-y-4 p-4">
+        <h3 className="text-lg font-semibold mb-4">What would you like to create?</h3>
         <TaskTypeSelector 
           selectedType={taskType}
           onTypeSelect={(type) => {
             setTaskType(type);
             setShowTypeSelector(false);
-            // Set default recurrence for habits
             if (type === 'habit') {
               setRecurrence('Daily');
             }
@@ -135,330 +159,338 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
   const selectedGoal = goals.find(g => g.id === goalId);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4">
-      {!initialTask && (
-        <div className="flex items-center justify-between">
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm"
-            onClick={() => setShowTypeSelector(true)}
-          >
-            ← Change Type
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            Creating a {taskType}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Title *</label>
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={`Enter ${taskType} title`}
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Description</label>
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder={`Enter ${taskType} description`}
-          rows={3}
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Subtasks</label>
-        <div className="space-y-2">
-          {subtasks.map((subtask) => (
-            <div key={subtask.id} className="flex items-center gap-2">
-              <Input value={subtask.title} readOnly className="flex-1" />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => removeSubtask(subtask.id)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <Input
-              value={newSubtask}
-              onChange={(e) => setNewSubtask(e.target.value)}
-              placeholder="Add subtask"
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
-            />
-            <Button type="button" variant="outline" onClick={addSubtask}>
-              <Plus className="h-4 w-4" />
+    <div className="max-h-[80vh] overflow-y-auto">
+      <form onSubmit={handleSubmit} className="space-y-4 p-4">
+        {!initialTask && (
+          <div className="flex items-center justify-between mb-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowTypeSelector(true)}
+            >
+              ← Change Type
             </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Project and Goal Linking */}
-      <div className="grid grid-cols-1 gap-4 p-4 border rounded-lg bg-muted/20">
-        <h3 className="text-sm font-semibold mb-2">Link to Projects & Goals</h3>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <FolderOpen className="h-4 w-4" />
-              Link to Project
-            </label>
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select project (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No project</SelectItem>
-                {projects.map((project: any) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${project.color || 'bg-gray-400'}`}></div>
-                      {project.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedProject && (
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs">
-                  <FolderOpen className="h-3 w-3 mr-1" />
-                  {selectedProject.name}
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <Target className="h-4 w-4" />
-              Link to Goal
-            </label>
-            <Select value={goalId} onValueChange={setGoalId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select goal (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No goal</SelectItem>
-                {goals.map((goal) => (
-                  <SelectItem key={goal.id} value={goal.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <span className="truncate">{goal.title}</span>
-                      <Badge variant="outline" className="text-xs ml-2">
-                        {goal.category}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedGoal && (
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs">
-                  <Target className="h-3 w-3 mr-1" />
-                  {selectedGoal.title}
-                </Badge>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {(selectedProject || selectedGoal) && (
-          <div className="text-xs text-muted-foreground mt-2 p-2 bg-blue-50 rounded border-l-2 border-blue-200">
-            💡 This {taskType} will contribute to {selectedProject ? `project "${selectedProject.name}"` : ''}{selectedProject && selectedGoal ? ' and ' : ''}{selectedGoal ? `goal "${selectedGoal.title}"` : ''}
+            <div className="text-sm text-muted-foreground">
+              Creating a {taskType}
+            </div>
           </div>
         )}
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Due Date</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !dueDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={dueDate}
-                onSelect={(date) => date && setDueDate(date)}
-                initialFocus
+          <label className="block text-sm font-medium mb-1">Title *</label>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={`Enter ${taskType} title`}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={`Enter ${taskType} description`}
+            rows={3}
+          />
+        </div>
+
+        {/* Subtasks Section */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Subtasks</label>
+          <div className="space-y-2">
+            {subtasks.map((subtask) => (
+              <div key={subtask.id} className="flex items-center gap-2">
+                <Input value={subtask.title} readOnly className="flex-1" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeSubtask(subtask.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <Input
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                placeholder="Add subtask"
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
               />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Priority</label>
-          <Select value={priority} onValueChange={(value: 'High' | 'Medium' | 'Low') => setPriority(value)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {taskType === 'habit' && (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Recurrence</label>
-            <Select value={recurrence} onValueChange={(value: 'None' | 'Daily' | 'Weekly' | 'Monthly') => setRecurrence(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Daily">Daily</SelectItem>
-                <SelectItem value="Weekly">Weekly</SelectItem>
-                <SelectItem value="Monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">XP Value</label>
-            <Input
-              type="number"
-              value={xpValue}
-              onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
-              min="1"
-              max="100"
-            />
+              <Button type="button" variant="outline" onClick={addSubtask}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
-      )}
 
-      {taskType === 'habit' && recurrence === 'Weekly' && (
-        <WeekdaySelector
-          selectedDays={weekDays}
-          onChange={setWeekDays}
-        />
-      )}
-
-      {/* Category Selection */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Category</label>
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <input
-              type="radio"
-              id="standard-cat"
-              checked={!useCustomCat}
-              onChange={() => setUseCustomCat(false)}
-            />
-            <label htmlFor="standard-cat" className="text-sm">Standard Category</label>
-          </div>
+        {/* Project and Goal Linking Section */}
+        <div className="grid grid-cols-1 gap-4 p-4 border rounded-lg bg-muted/20">
+          <h3 className="text-sm font-semibold mb-2">Link to Projects & Goals</h3>
           
-          {!useCustomCat && (
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <div className="flex items-center gap-2">
-            <input
-              type="radio"
-              id="custom-cat"
-              checked={useCustomCat}
-              onChange={() => setUseCustomCat(true)}
-            />
-            <label htmlFor="custom-cat" className="text-sm">Custom Category</label>
-          </div>
-
-          {useCustomCat && (
-            <div className="space-y-2">
-              <Select value={customCategory} onValueChange={setCustomCategory}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <FolderOpen className="h-4 w-4" />
+                Link to Project
+              </label>
+              <Select value={projectId} onValueChange={setProjectId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select custom category" />
+                  <SelectValue placeholder="Select project (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  <SelectItem value="">No project</SelectItem>
+                  {projects.map((project: any) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: project.color || '#gray' }}></div>
+                        {project.name}
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
-              <div className="flex gap-2">
-                <Input
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="Create new category"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomCategory())}
-                />
-                <Button type="button" onClick={handleAddCustomCategory} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              {selectedProject && (
+                <div className="mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    <FolderOpen className="h-3 w-3 mr-1" />
+                    {selectedProject.name}
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <Target className="h-4 w-4" />
+                Link to Goal
+              </label>
+              <Select value={goalId} onValueChange={setGoalId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select goal (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No goal</SelectItem>
+                  {goals.map((goal) => (
+                    <SelectItem key={goal.id} value={goal.id}>
+                      <div className="flex items-center justify-between w-full">
+                        <span className="truncate">{goal.title}</span>
+                        <Badge variant="outline" className="text-xs ml-2">
+                          {goal.category}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedGoal && (
+                <div className="mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    <Target className="h-3 w-3 mr-1" />
+                    {selectedGoal.title}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {(selectedProject || selectedGoal) && (
+            <div className="text-xs text-muted-foreground mt-2 p-2 bg-blue-50 rounded border-l-2 border-blue-200">
+              💡 This {taskType} will contribute to {selectedProject ? `project "${selectedProject.name}"` : ''}{selectedProject && selectedGoal ? ' and ' : ''}{selectedGoal ? `goal "${selectedGoal.title}"` : ''}
             </div>
           )}
         </div>
-      </div>
 
-      {taskType === 'task' && (
+        {/* Date and Priority */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">XP Value</label>
-            <Input
-              type="number"
-              value={xpValue}
-              onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
-              min="1"
-              max="100"
-            />
+            <label className="block text-sm font-medium mb-1">Due Date</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !dueDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={(date) => date && setDueDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Task Type</label>
-            <Select value={taskTypeField} onValueChange={(value: 'normal' | 'surplus') => setTaskTypeField(value)}>
+            <label className="block text-sm font-medium mb-1">Priority</label>
+            <Select value={priority} onValueChange={(value: 'High' | 'Medium' | 'Low') => setPriority(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="normal">Normal</SelectItem>
-                <SelectItem value="surplus">Surplus</SelectItem>
+                <SelectItem value="High">High</SelectItem>
+                <SelectItem value="Medium">Medium</SelectItem>
+                <SelectItem value="Low">Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
-      )}
 
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          {initialTask ? `Update ${taskType}` : `Create ${taskType}`}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+        {/* Habit-specific fields */}
+        {taskType === 'habit' && (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Recurrence</label>
+                <Select value={recurrence} onValueChange={(value: 'None' | 'Daily' | 'Weekly' | 'Monthly') => setRecurrence(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Daily">Daily</SelectItem>
+                    <SelectItem value="Weekly">Weekly</SelectItem>
+                    <SelectItem value="Monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">XP Value</label>
+                <Input
+                  type="number"
+                  value={xpValue}
+                  onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
+                  min="1"
+                  max="100"
+                />
+              </div>
+            </div>
+
+            {recurrence === 'Weekly' && (
+              <WeekdaySelector
+                selectedDays={weekDays}
+                onChange={setWeekDays}
+              />
+            )}
+          </>
+        )}
+
+        {/* Category Selection */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                id="standard-cat"
+                checked={!useCustomCat}
+                onChange={() => setUseCustomCat(false)}
+              />
+              <label htmlFor="standard-cat" className="text-sm">Standard Category</label>
+            </div>
+            
+            {!useCustomCat && (
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                id="custom-cat"
+                checked={useCustomCat}
+                onChange={() => setUseCustomCat(true)}
+              />
+              <label htmlFor="custom-cat" className="text-sm">Custom Category</label>
+            </div>
+
+            {useCustomCat && (
+              <div className="space-y-2">
+                <Select value={customCategory} onValueChange={setCustomCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select custom category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <div className="flex gap-2">
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Create new category"
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomCategory())}
+                  />
+                  <Button type="button" onClick={handleAddCustomCategory} size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Task-specific fields */}
+        {taskType === 'task' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">XP Value</label>
+              <Input
+                type="number"
+                value={xpValue}
+                onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
+                min="1"
+                max="100"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Task Type</label>
+              <Select value={taskTypeField} onValueChange={(value: 'normal' | 'surplus') => setTaskTypeField(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="surplus">Surplus</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-4">
+          <Button type="submit" className="flex-1">
+            {initialTask ? `Update ${taskType}` : `Create ${taskType}`}
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

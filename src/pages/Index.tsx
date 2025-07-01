@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
@@ -51,6 +50,7 @@ import { EnhancedDailyReflectionForm } from '../components/EnhancedDailyReflecti
 import { ChallengeTemplates } from '../components/ChallengeTemplates';
 import { EnhancedHabitPerformanceCalendar } from '../components/EnhancedHabitPerformanceCalendar';
 import { useDataReset } from '../hooks/useDataReset';
+import { RoutineHabitTracker } from '../components/RoutineHabitTracker';
 
 const Index = () => {
   const { 
@@ -162,26 +162,34 @@ const Index = () => {
   };
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
-    // Handle projectId and goalId being "none" 
-    const cleanedTaskData = {
-      ...taskData,
-      projectId: taskData.projectId === 'none' ? undefined : taskData.projectId,
-      goalId: taskData.goalId === 'none' ? undefined : taskData.goalId,
-    };
-    addTask(cleanedTaskData);
-    setIsFormOpen(false);
-  };
-
-  const handleEditTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
-    if (editingTask) {
-      // Handle projectId and goalId being "none"
+    try {
       const cleanedTaskData = {
         ...taskData,
         projectId: taskData.projectId === 'none' ? undefined : taskData.projectId,
         goalId: taskData.goalId === 'none' ? undefined : taskData.goalId,
       };
-      updateTask(editingTask.id, cleanedTaskData);
-      setEditingTask(null);
+      console.log('Adding task:', cleanedTaskData);
+      addTask(cleanedTaskData);
+      setIsFormOpen(false);
+    } catch (error) {
+      console.error('Error adding task:', error);
+    }
+  };
+
+  const handleEditTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
+    if (editingTask) {
+      try {
+        const cleanedTaskData = {
+          ...taskData,
+          projectId: taskData.projectId === 'none' ? undefined : taskData.projectId,
+          goalId: taskData.goalId === 'none' ? undefined : taskData.goalId,
+        };
+        console.log('Updating task:', cleanedTaskData);
+        updateTask(editingTask.id, cleanedTaskData);
+        setEditingTask(null);
+      } catch (error) {
+        console.error('Error updating task:', error);
+      }
     }
   };
 
@@ -204,7 +212,6 @@ const Index = () => {
     
     switch (reward.type) {
       case 'xp':
-        // Store bonus XP to be used from inventory
         const currentBonusXP = localStorage.getItem('bonusXP');
         const newBonusXP = (currentBonusXP ? parseInt(currentBonusXP) : 0) + (reward.value as number);
         localStorage.setItem('bonusXP', newBonusXP.toString());
@@ -224,7 +231,6 @@ const Index = () => {
         addStreakShield(reward.value as number);
         break;
       case 'quote':
-        // Add motivation quote to user stats
         const quotes = JSON.parse(localStorage.getItem('motivationQuotes') || '[]');
         quotes.push(reward.description || 'Stay motivated!');
         localStorage.setItem('motivationQuotes', JSON.stringify(quotes));
@@ -236,15 +242,12 @@ const Index = () => {
     const powerUp = userStats.powerUps.find(p => p.id === powerUpId);
     if (!powerUp) return;
 
-    // Handle auto-complete power-ups through inventory component with task selector
     if (powerUp.type === 'auto-complete') {
-      // This is handled via the inventory component with task selector
       return;
     }
     
     usePowerUp(powerUpId);
     
-    // Mark daily usage for specific power-up types
     if (powerUp.type === 'skip-token') {
       markDailyUsed('skipToken');
     }
@@ -254,7 +257,6 @@ const Index = () => {
     completeTask(taskId);
     markDailyUsed('autoComplete');
     
-    // Remove the auto-complete power-up
     const autoCompletePowerUp = userStats.powerUps.find(p => p.type === 'auto-complete');
     if (autoCompletePowerUp) {
       usePowerUp(autoCompletePowerUp.id);
@@ -293,9 +295,13 @@ const Index = () => {
   const getTasksWithProjects = (taskList: Task[]) => {
     return taskList.map(task => {
       if (task.projectId) {
-        const projects = JSON.parse(localStorage.getItem('projects') || '[]');
-        const project = projects.find((p: any) => p.id === task.projectId);
-        return { ...task, projectName: project?.name };
+        try {
+          const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+          const project = projects.find((p: any) => p.id === task.projectId);
+          return { ...task, projectName: project?.name };
+        } catch {
+          return task;
+        }
       }
       return task;
     });
@@ -322,17 +328,14 @@ const Index = () => {
               </div>
               
               <div className="flex items-center gap-2 shrink-0">
-                {/* Mobile Avatar */}
                 <div className="block sm:hidden">
                   <Avatar progress={progress} size="small" showDetails={false} />
                 </div>
                 
-                {/* Desktop Avatar */}
                 <div className="hidden sm:block">
                   <Avatar progress={progress} size="small" showDetails={true} />
                 </div>
                 
-                {/* Reset Button */}
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -342,10 +345,8 @@ const Index = () => {
                   Reset All
                 </Button>
                 
-                {/* Theme Toggle */}
                 <ThemeSelector currentTheme={currentTheme} onThemeChange={handleThemeChange} />
                 
-                {/* Add Task Button */}
                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                   <DialogTrigger asChild>
                     <Button className="gap-2 min-h-[44px]" size={isMobile ? "sm" : "default"}>
@@ -372,12 +373,10 @@ const Index = () => {
 
           {/* Main Content */}
           <main className="flex-1 container mx-auto p-3 sm:p-4 max-w-6xl">
-            {/* XP Bar - Always visible */}
             <div className="mb-4 sm:mb-6">
               <XPBar progress={progress} />
             </div>
 
-            {/* Spin Wheel Status */}
             <div className="mb-4 sm:mb-6">
               <SpinWheelStatus
                 canSpin={canSpin() && canUseDaily('spinUsed')}
@@ -386,7 +385,6 @@ const Index = () => {
               />
             </div>
 
-            {/* Status Bar - Mobile optimized */}
             <div className="mb-4 sm:mb-6">
               <StatusBar
                 userStats={userStats}
@@ -397,7 +395,6 @@ const Index = () => {
               />
             </div>
 
-            {/* Progress Tracker */}
             <div className="mb-4 sm:mb-6">
               <ProgressTracker 
                 progress={progress} 
@@ -415,6 +412,11 @@ const Index = () => {
                       🎉 Surplus tasks unlocked!
                     </div>
                   )}
+                </div>
+                
+                {/* Routine Habits Section */}
+                <div className="mb-6">
+                  <RoutineHabitTracker showInTodayView={true} />
                 </div>
                 
                 {visibleTodaysTasks.length === 0 ? (
@@ -458,6 +460,13 @@ const Index = () => {
                             <span className="text-xs sm:text-sm text-muted-foreground">({dayTasks.length} tasks)</span>
                           </div>
                         </h3>
+                        
+                        {/* Routine Habits for this day */}
+                        {isToday && (
+                          <div className="mb-4">
+                            <RoutineHabitTracker showInTodayView={true} />
+                          </div>
+                        )}
                         
                         {dayTasks.length === 0 ? (
                           <p className="text-sm text-muted-foreground">No tasks scheduled</p>

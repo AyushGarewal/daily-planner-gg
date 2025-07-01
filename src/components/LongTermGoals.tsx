@@ -32,29 +32,47 @@ export function LongTermGoals() {
   const calculateNumericProgress = (goal: Goal) => {
     if (!goal.hasNumericTarget || !goal.numericTarget) return null;
     
-    // Calculate progress from linked tasks/habits completion
-    let completedCount = 0;
+    // Use current progress from goal if available, otherwise calculate from linked items
+    let currentProgress = goal.currentProgress || 0;
     
-    // Count completed linked tasks
-    if (goal.linkedTaskIds) {
-      const linkedTasks = tasks.filter(task => 
-        goal.linkedTaskIds!.includes(task.id) && task.completed
-      );
-      completedCount += linkedTasks.length;
+    // If no current progress set, calculate from linked tasks/habits completion
+    if (currentProgress === 0) {
+      let completedCount = 0;
+      
+      // Count completed linked tasks
+      if (goal.linkedTaskIds && goal.linkedTaskIds.length > 0) {
+        const linkedTasks = tasks.filter(task => 
+          goal.linkedTaskIds!.includes(task.id) && task.completed
+        );
+        completedCount += linkedTasks.length;
+      }
+      
+      // Count completed linked habits (for habits, might count daily completions)
+      if (goal.linkedHabitIds && goal.linkedHabitIds.length > 0) {
+        const linkedHabits = tasks.filter(task => 
+          goal.linkedHabitIds!.includes(task.id) && task.completed
+        );
+        completedCount += linkedHabits.length;
+      }
+      
+      currentProgress = Math.min(completedCount, goal.numericTarget);
     }
     
-    // Count completed linked habits (you might want to count daily completions differently)
-    if (goal.linkedHabitIds) {
-      const linkedHabits = tasks.filter(task => 
-        goal.linkedHabitIds!.includes(task.id) && task.completed
-      );
-      completedCount += linkedHabits.length;
-    }
+    const percentage = goal.numericTarget > 0 ? Math.round((currentProgress / goal.numericTarget) * 100) : 0;
     
-    const progress = Math.min(completedCount, goal.numericTarget);
-    const percentage = Math.round((progress / goal.numericTarget) * 100);
-    
-    return { current: progress, target: goal.numericTarget, percentage };
+    return { 
+      current: currentProgress, 
+      target: goal.numericTarget, 
+      percentage: Math.min(percentage, 100) 
+    };
+  };
+
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+  };
+
+  const handleGoalClick = (goal: Goal) => {
+    setSelectedGoal(goal);
   };
 
   return (
@@ -76,7 +94,7 @@ export function LongTermGoals() {
             <DialogHeader>
               <DialogTitle>Create New Goal</DialogTitle>
             </DialogHeader>
-            <GoalForm onClose={() => setIsFormOpen(false)} />
+            <GoalForm onClose={handleFormClose} />
           </DialogContent>
         </Dialog>
       </div>
@@ -105,7 +123,7 @@ export function LongTermGoals() {
               <Card 
                 key={goal.id} 
                 className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-                onClick={() => setSelectedGoal(goal)}
+                onClick={() => handleGoalClick(goal)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -174,7 +192,14 @@ export function LongTermGoals() {
                   {/* Linked Items Summary */}
                   {((goal.linkedTaskIds?.length || 0) + (goal.linkedHabitIds?.length || 0)) > 0 && (
                     <div className="text-xs text-muted-foreground border-t pt-2">
-                      {goal.linkedTaskIds?.length || 0} linked tasks, {goal.linkedHabitIds?.length || 0} linked habits
+                      <div className="flex items-center gap-4">
+                        {(goal.linkedTaskIds?.length || 0) > 0 && (
+                          <span>{goal.linkedTaskIds?.length} linked tasks</span>
+                        )}
+                        {(goal.linkedHabitIds?.length || 0) > 0 && (
+                          <span>{goal.linkedHabitIds?.length} linked habits</span>
+                        )}
+                      </div>
                     </div>
                   )}
                   
