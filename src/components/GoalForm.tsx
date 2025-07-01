@@ -188,7 +188,7 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
             <Checkbox
               id="numeric-target"
               checked={hasNumericTarget}
-              onCheckedChange={setHasNumericTarget}
+              onCheckedChange={(checked) => setHasNumericTarget(checked === true)}
             />
             <label htmlFor="numeric-target" className="text-sm font-medium flex items-center gap-2">
               <Target className="h-4 w-4" />
@@ -256,7 +256,13 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
                     <Checkbox
                       id={`habit-${habit.id}`}
                       checked={linkedHabitIds.includes(habit.id)}
-                      onCheckedChange={() => toggleHabitLink(habit.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) {
+                          toggleHabitLink(habit.id);
+                        } else if (checked === false) {
+                          toggleHabitLink(habit.id);
+                        }
+                      }}
                     />
                     <label htmlFor={`habit-${habit.id}`} className="text-sm flex-1 flex items-center justify-between">
                       <span>{habit.title}</span>
@@ -279,7 +285,13 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
                     <Checkbox
                       id={`task-${task.id}`}
                       checked={linkedTaskIds.includes(task.id)}
-                      onCheckedChange={() => toggleTaskLink(task.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) {
+                          toggleTaskLink(task.id);
+                        } else if (checked === false) {
+                          toggleTaskLink(task.id);
+                        }
+                      }}
                     />
                     <label htmlFor={`task-${task.id}`} className="text-sm flex-1 flex items-center justify-between">
                       <span>{task.title}</span>
