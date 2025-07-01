@@ -143,7 +143,6 @@ export function ProjectTaskIntegration({
                   onEdit={handleEditTaskClick}
                   onDelete={handleDeleteTask}
                   onSubtaskToggle={handleSubtaskToggle}
-                  showProject={false} // Don't show project info since we're already in project context
                 />
               </div>
             ))}
