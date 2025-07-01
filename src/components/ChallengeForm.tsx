@@ -278,7 +278,7 @@ export function ChallengeForm({ onSubmit, onCancel, initialChallenge }: Challeng
                       </SelectTrigger>
                       <SelectContent>
                         {availableHabits.map((habit) => (
-                          <SelectItem key={habit.id} value={habit.id}>
+                          <SelectItem key={habit.id} value={habit.id || 'none'}>
                             <div className="flex items-center justify-between w-full">
                               <span>{habit.title}</span>
                               <Badge variant="outline" className="text-xs ml-2">
