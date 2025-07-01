@@ -12,8 +12,6 @@ import { format } from 'date-fns';
 import { Task, CATEGORIES, Subtask } from '../types/task';
 import { TaskTypeSelector } from './TaskTypeSelector';
 import { WeekdaySelector } from './WeekdaySelector';
-import { useCustomCategories } from '../hooks/useCustomCategories';
-import { useGoals } from '../hooks/useGoals';
 import { cn } from '@/lib/utils';
 
 interface TaskFormProps {
@@ -25,49 +23,46 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId, preSelectedGoalId }: TaskFormProps) {
-  const { getCategoriesByType, addCategory } = useCustomCategories();
-  const { goals } = useGoals();
-  
   const [taskType, setTaskType] = useState<'task' | 'habit'>(initialTask?.type || 'task');
   const [title, setTitle] = useState(initialTask?.title || '');
   const [description, setDescription] = useState(initialTask?.description || '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialTask?.subtasks || []);
-  const [dueDate, setDueDate] = useState<Date>(initialTask?.dueDate || new Date());
+  const [dueDate, setDueDate] = useState<Date>(initialTask?.dueDate ? new Date(initialTask.dueDate) : new Date());
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>(initialTask?.priority || 'Medium');
   const [recurrence, setRecurrence] = useState<'None' | 'Daily' | 'Weekly' | 'Monthly'>(initialTask?.recurrence || 'None');
   const [xpValue, setXpValue] = useState(initialTask?.xpValue || 10);
   const [category, setCategory] = useState(initialTask?.category || 'Personal');
-  const [customCategory, setCustomCategory] = useState(initialTask?.customCategory || '');
   const [taskTypeField, setTaskTypeField] = useState<'normal' | 'surplus'>(initialTask?.taskType || 'normal');
   const [weekDays, setWeekDays] = useState<number[]>(initialTask?.weekDays || []);
   const [newSubtask, setNewSubtask] = useState('');
   const [showTypeSelector, setShowTypeSelector] = useState(!initialTask);
   const [projectId, setProjectId] = useState(initialTask?.projectId || preSelectedProjectId || '');
   const [goalId, setGoalId] = useState(initialTask?.goalId || preSelectedGoalId || '');
-  const [useCustomCat, setUseCustomCat] = useState(!!initialTask?.customCategory);
-  const [newCategoryName, setNewCategoryName] = useState('');
 
-  // Get projects from localStorage with error handling
+  // Safe function to get projects
   const getProjects = () => {
     try {
-      return JSON.parse(localStorage.getItem('projects') || '[]');
-    } catch {
+      const stored = localStorage.getItem('projects');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      return [];
+    }
+  };
+
+  // Safe function to get goals
+  const getGoals = () => {
+    try {
+      const stored = localStorage.getItem('goals');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading goals:', error);
       return [];
     }
   };
   
   const projects = getProjects();
-  
-  // Get custom categories for this task type with error handling
-  const getCustomCategoriesSafe = () => {
-    try {
-      return getCategoriesByType(taskType);
-    } catch {
-      return [];
-    }
-  };
-  
-  const customCategories = getCustomCategoriesSafe();
+  const goals = getGoals();
 
   const addSubtask = () => {
     if (newSubtask.trim()) {
@@ -82,18 +77,6 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
 
   const removeSubtask = (id: string) => {
     setSubtasks(prev => prev.filter(st => st.id !== id));
-  };
-
-  const handleAddCustomCategory = async () => {
-    if (newCategoryName.trim()) {
-      try {
-        await addCategory(newCategoryName.trim(), taskType);
-        setCustomCategory(newCategoryName.trim());
-        setNewCategoryName('');
-      } catch (error) {
-        console.error('Error adding custom category:', error);
-      }
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,8 +103,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
       priority,
       recurrence: taskType === 'habit' ? recurrence : 'None',
       xpValue,
-      category: useCustomCat ? 'Custom' : category,
-      customCategory: useCustomCat ? customCategory : undefined,
+      category,
       taskType: taskTypeField,
       type: taskType,
       weekDays: taskType === 'habit' && recurrence === 'Weekly' ? weekDays : undefined,
@@ -156,7 +138,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
   }
 
   const selectedProject = projects.find((p: any) => p.id === projectId);
-  const selectedGoal = goals.find(g => g.id === goalId);
+  const selectedGoal = goals.find((g: any) => g.id === goalId);
 
   return (
     <div className="max-h-[80vh] overflow-y-auto">
@@ -275,7 +257,7 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">No goal</SelectItem>
-                  {goals.map((goal) => (
+                  {goals.map((goal: any) => (
                     <SelectItem key={goal.id} value={goal.id}>
                       <div className="flex items-center justify-between w-full">
                         <span className="truncate">{goal.title}</span>
@@ -390,67 +372,16 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
         {/* Category Selection */}
         <div>
           <label className="block text-sm font-medium mb-1">Category</label>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                id="standard-cat"
-                checked={!useCustomCat}
-                onChange={() => setUseCustomCat(false)}
-              />
-              <label htmlFor="standard-cat" className="text-sm">Standard Category</label>
-            </div>
-            
-            {!useCustomCat && (
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <div className="flex items-center gap-2">
-              <input
-                type="radio"
-                id="custom-cat"
-                checked={useCustomCat}
-                onChange={() => setUseCustomCat(true)}
-              />
-              <label htmlFor="custom-cat" className="text-sm">Custom Category</label>
-            </div>
-
-            {useCustomCat && (
-              <div className="space-y-2">
-                <Select value={customCategory} onValueChange={setCustomCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select custom category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customCategories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <div className="flex gap-2">
-                  <Input
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="Create new category"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomCategory())}
-                  />
-                  <Button type="button" onClick={handleAddCustomCategory} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Task-specific fields */}

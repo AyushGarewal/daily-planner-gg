@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Task, UserProgress, getCurrentLevel, getXPRequiredForLevel, DailyUsage } from '../types/task';
@@ -27,7 +28,7 @@ export function useTasks() {
     setTasks(prev => [...prev, newTask]);
     
     // Auto-generate recurring tasks for habits
-    if (task.type === 'habit') {
+    if (task.type === 'habit' && !task.isRoutine) {
       generateRecurringTasks(newTask);
     }
   };
@@ -41,11 +42,6 @@ export function useTasks() {
     // For daily recurring habits, generate future tasks starting from creation date
     if (baseTask.recurrence === 'Daily') {
       const futureTasks: Task[] = [];
-      
-      // If task is created today and should repeat daily, include today
-      if (isSameDay(taskDate, today)) {
-        // Task for today already exists as the base task
-      }
       
       // Generate next 30 days of recurring tasks starting from tomorrow
       for (let i = 1; i <= 30; i++) {
@@ -66,12 +62,6 @@ export function useTasks() {
     // For weekly recurring habits with specific weekdays
     if (baseTask.recurrence === 'Weekly' && baseTask.weekDays) {
       const futureTasks: Task[] = [];
-      const creationDay = getDay(taskDate);
-      
-      // Check if today should have this habit
-      if (baseTask.weekDays.includes(creationDay) && isSameDay(taskDate, today)) {
-        // Base task covers today, no need to create duplicate
-      }
       
       // Generate next 4 weeks starting from creation date
       for (let week = 0; week < 4; week++) {
@@ -129,6 +119,33 @@ export function useTasks() {
     }));
   };
 
+  const updateLinkedGoalsProgress = (task: Task) => {
+    if (!task.goalId) return;
+    
+    try {
+      const goals = JSON.parse(localStorage.getItem('goals') || '[]');
+      const updatedGoals = goals.map((goal: any) => {
+        if (goal.id === task.goalId && goal.hasNumericTarget) {
+          const newProgress = (goal.currentProgress || 0) + 1;
+          const isCompleted = newProgress >= goal.numericTarget;
+          
+          return {
+            ...goal,
+            currentProgress: Math.min(newProgress, goal.numericTarget),
+            isCompleted,
+            updatedAt: new Date()
+          };
+        }
+        return goal;
+      });
+      
+      localStorage.setItem('goals', JSON.stringify(updatedGoals));
+      console.log('Updated goal progress for task completion:', task.title);
+    } catch (error) {
+      console.error('Error updating goal progress:', error);
+    }
+  };
+
   const completeTask = (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task || task.completed) return;
@@ -141,6 +158,9 @@ export function useTasks() {
 
     const completedAt = new Date();
     updateTask(id, { completed: true, completedAt });
+
+    // Update linked goals progress
+    updateLinkedGoalsProgress(task);
 
     // Update progress with new level system
     setProgress(prev => {

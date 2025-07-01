@@ -1,122 +1,88 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { CalendarIcon, Target, Link as LinkIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
 import { Goal } from '../types/goals';
+import { cn } from '@/lib/utils';
 
 interface GoalFormProps {
   onClose: () => void;
   initialGoal?: Goal;
 }
 
-interface GoalFormData {
-  title: string;
-  description: string;
-  category: 'Career' | 'Personal' | 'Health' | 'Education' | 'Other';
-  startDate: string;
-  targetDate?: string;
-  hasNumericTarget: boolean;
-  numericTarget?: number;
-  targetUnit?: string;
-  linkedTaskIds: string[];
-  linkedHabitIds: string[];
-}
-
 export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
   const { addGoal, updateGoal } = useGoals();
   const { tasks } = useTasks();
   
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<GoalFormData>({
-    defaultValues: initialGoal ? {
-      title: initialGoal.title,
-      description: initialGoal.description,
-      category: initialGoal.category,
-      startDate: new Date(initialGoal.startDate).toISOString().split('T')[0],
-      targetDate: initialGoal.targetDate ? new Date(initialGoal.targetDate).toISOString().split('T')[0] : undefined,
-      hasNumericTarget: initialGoal.hasNumericTarget || false,
-      numericTarget: initialGoal.numericTarget,
-      targetUnit: initialGoal.targetUnit || 'times',
-      linkedTaskIds: initialGoal.linkedTaskIds || [],
-      linkedHabitIds: initialGoal.linkedHabitIds || []
-    } : {
-      startDate: new Date().toISOString().split('T')[0],
-      hasNumericTarget: false,
-      targetUnit: 'times',
-      linkedTaskIds: [],
-      linkedHabitIds: []
+  const [title, setTitle] = useState(initialGoal?.title || '');
+  const [description, setDescription] = useState(initialGoal?.description || '');
+  const [category, setCategory] = useState<'Career' | 'Personal' | 'Health' | 'Education' | 'Other'>(
+    initialGoal?.category || 'Personal'
+  );
+  const [startDate, setStartDate] = useState<Date>(
+    initialGoal?.startDate ? new Date(initialGoal.startDate) : new Date()
+  );
+  const [targetDate, setTargetDate] = useState<Date | undefined>(
+    initialGoal?.targetDate ? new Date(initialGoal.targetDate) : undefined
+  );
+  
+  // Numerical target fields
+  const [hasNumericTarget, setHasNumericTarget] = useState(initialGoal?.hasNumericTarget || false);
+  const [numericTarget, setNumericTarget] = useState(initialGoal?.numericTarget || 10);
+  const [targetUnit, setTargetUnit] = useState(initialGoal?.targetUnit || 'times');
+  const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>(initialGoal?.linkedTaskIds || []);
+  const [linkedHabitIds, setLinkedHabitIds] = useState<string[]>(initialGoal?.linkedHabitIds || []);
+
+  const availableTasks = tasks.filter(task => task.type === 'task');
+  const availableHabits = tasks.filter(task => task.type === 'habit');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const goalData = {
+      title: title.trim(),
+      description: description.trim(),
+      category,
+      startDate,
+      targetDate,
+      hasNumericTarget,
+      numericTarget: hasNumericTarget ? numericTarget : undefined,
+      targetUnit: hasNumericTarget ? targetUnit : undefined,
+      linkedTaskIds: linkedTaskIds.length > 0 ? linkedTaskIds : undefined,
+      linkedHabitIds: linkedHabitIds.length > 0 ? linkedHabitIds : undefined,
+      currentProgress: initialGoal?.currentProgress || 0,
+    };
+
+    if (initialGoal) {
+      updateGoal(initialGoal.id, goalData);
+    } else {
+      addGoal(goalData);
     }
-  });
-
-  const [selectedTasks, setSelectedTasks] = React.useState<string[]>(initialGoal?.linkedTaskIds || []);
-  const [selectedHabits, setSelectedHabits] = React.useState<string[]>(initialGoal?.linkedHabitIds || []);
-
-  const watchHasNumericTarget = watch('hasNumericTarget');
-  const watchCategory = watch('category');
-
-  // Get available tasks and habits with deduplication
-  const getUniqueItems = (items: any[], type: 'task' | 'habit') => {
-    const seen = new Set();
-    return items.filter(item => {
-      if (item.type !== type) return false;
-      const key = `${item.title}-${item.category}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    
+    onClose();
   };
 
-  const availableTasks = getUniqueItems(tasks, 'task');
-  const availableHabits = getUniqueItems(tasks, 'habit');
-
-  const onSubmit = (data: GoalFormData) => {
-    try {
-      const goalData = {
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        startDate: new Date(data.startDate),
-        targetDate: data.targetDate ? new Date(data.targetDate) : undefined,
-        hasNumericTarget: data.hasNumericTarget,
-        numericTarget: data.hasNumericTarget ? data.numericTarget : undefined,
-        targetUnit: data.hasNumericTarget ? data.targetUnit : undefined,
-        linkedTaskIds: selectedTasks,
-        linkedHabitIds: selectedHabits,
-        currentProgress: initialGoal?.currentProgress || 0
-      };
-
-      console.log('Submitting goal data:', goalData);
-
-      if (initialGoal) {
-        updateGoal(initialGoal.id, goalData);
-      } else {
-        addGoal(goalData);
-      }
-      
-      onClose();
-    } catch (error) {
-      console.error('Error submitting goal:', error);
-    }
-  };
-
-  const toggleTaskSelection = (taskId: string) => {
-    setSelectedTasks(prev => 
+  const toggleTaskLink = (taskId: string) => {
+    setLinkedTaskIds(prev => 
       prev.includes(taskId) 
         ? prev.filter(id => id !== taskId)
         : [...prev, taskId]
     );
   };
 
-  const toggleHabitSelection = (habitId: string) => {
-    setSelectedHabits(prev => 
+  const toggleHabitLink = (habitId: string) => {
+    setLinkedHabitIds(prev => 
       prev.includes(habitId) 
         ? prev.filter(id => id !== habitId)
         : [...prev, habitId]
@@ -124,221 +90,225 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
   };
 
   return (
-    <div className="max-h-[80vh] overflow-y-auto">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-4">
-        <div className="space-y-2">
-          <Label htmlFor="title">Goal Title</Label>
+    <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto p-1">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Goal Title *</label>
           <Input
-            id="title"
-            placeholder="e.g., Become a photographer"
-            {...register('title', { required: 'Goal title is required' })}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter your long-term goal"
+            required
           />
-          {errors.title && (
-            <p className="text-sm text-destructive">{errors.title.message}</p>
-          )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description">Description or Vision</Label>
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
           <Textarea
-            id="description"
-            placeholder="Describe your vision and what achieving this goal means to you..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe your goal and why it matters to you"
             rows={3}
-            {...register('description', { required: 'Description is required' })}
           />
-          {errors.description && (
-            <p className="text-sm text-destructive">{errors.description.message}</p>
-          )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Select value={watchCategory} onValueChange={(value) => setValue('category', value as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Career">Career</SelectItem>
-              <SelectItem value="Personal">Personal</SelectItem>
-              <SelectItem value="Health">Health</SelectItem>
-              <SelectItem value="Education">Education</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Category</label>
+            <Select value={category} onValueChange={(value: any) => setCategory(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Career">Career</SelectItem>
+                <SelectItem value="Personal">Personal</SelectItem>
+                <SelectItem value="Health">Health</SelectItem>
+                <SelectItem value="Education">Education</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Start Date</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={(date) => date && setStartDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
-        {/* Numeric Target Section */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Target Date (Optional)</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !targetDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {targetDate ? format(targetDate, "PPP") : <span>Pick a target date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={targetDate}
+                onSelect={setTargetDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Numerical Target Section */}
         <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
           <div className="flex items-center space-x-2">
-            <Switch
-              id="hasNumericTarget"
-              checked={watchHasNumericTarget}
-              onCheckedChange={(checked) => setValue('hasNumericTarget', checked)}
+            <Checkbox
+              id="numeric-target"
+              checked={hasNumericTarget}
+              onCheckedChange={setHasNumericTarget}
             />
-            <Label htmlFor="hasNumericTarget" className="font-medium">
-              Set Numeric Target
-            </Label>
+            <label htmlFor="numeric-target" className="text-sm font-medium flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Set Numerical Target
+            </label>
           </div>
-          
-          {watchHasNumericTarget && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="numericTarget">Target Number</Label>
-                <Input
-                  id="numericTarget"
-                  type="number"
-                  min="1"
-                  placeholder="100"
-                  {...register('numericTarget', { 
-                    required: watchHasNumericTarget ? 'Target number is required' : false,
-                    min: { value: 1, message: 'Target must be at least 1' }
-                  })}
-                />
-                {errors.numericTarget && (
-                  <p className="text-sm text-destructive">{errors.numericTarget.message}</p>
-                )}
+
+          {hasNumericTarget && (
+            <div className="space-y-4 ml-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Target Number</label>
+                  <Input
+                    type="number"
+                    value={numericTarget}
+                    onChange={(e) => setNumericTarget(parseInt(e.target.value) || 0)}
+                    min="1"
+                    placeholder="e.g., 50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Unit</label>
+                  <Select value={targetUnit} onValueChange={setTargetUnit}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="times">times</SelectItem>
+                      <SelectItem value="hours">hours</SelectItem>
+                      <SelectItem value="days">days</SelectItem>
+                      <SelectItem value="pages">pages</SelectItem>
+                      <SelectItem value="sessions">sessions</SelectItem>
+                      <SelectItem value="pounds">pounds</SelectItem>
+                      <SelectItem value="kilograms">kilograms</SelectItem>
+                      <SelectItem value="miles">miles</SelectItem>
+                      <SelectItem value="kilometers">kilometers</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="targetUnit">Unit</Label>
-                <Select onValueChange={(value) => setValue('targetUnit', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="times" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="times">times</SelectItem>
-                    <SelectItem value="hours">hours</SelectItem>
-                    <SelectItem value="days">days</SelectItem>
-                    <SelectItem value="pages">pages</SelectItem>
-                    <SelectItem value="sessions">sessions</SelectItem>
-                    <SelectItem value="workouts">workouts</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              <div className="text-sm text-muted-foreground p-2 bg-blue-50 rounded border-l-2 border-blue-200">
+                Target: Complete this goal {numericTarget} {targetUnit}
               </div>
             </div>
           )}
         </div>
 
-        {/* Enhanced Task and Habit Selection */}
-        <div className="space-y-4">
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Link Tasks (Optional)</Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-              {availableTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No unique tasks available to link</p>
-              ) : (
-                availableTasks.map(task => (
-                  <div key={task.id} className="flex items-center space-x-2 p-1 hover:bg-muted/30 rounded">
-                    <input
-                      type="checkbox"
-                      checked={selectedTasks.includes(task.id)}
-                      onChange={() => toggleTaskSelection(task.id)}
-                      className="rounded"
+        {/* Habit and Task Linking Section */}
+        <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" />
+            Link Tasks & Habits (Optional)
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Link habits or tasks to this goal. When linked items are completed, your goal progress will automatically update.
+          </p>
+
+          {availableHabits.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Link Habits</label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {availableHabits.map((habit) => (
+                  <div key={habit.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`habit-${habit.id}`}
+                      checked={linkedHabitIds.includes(habit.id)}
+                      onCheckedChange={() => toggleHabitLink(habit.id)}
                     />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate block">{task.title}</span>
-                      <span className="text-xs text-muted-foreground">{task.category}</span>
-                    </div>
+                    <label htmlFor={`habit-${habit.id}`} className="text-sm flex-1 flex items-center justify-between">
+                      <span>{habit.title}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {habit.category}
+                      </Badge>
+                    </label>
                   </div>
-                ))
-              )}
-            </div>
-            {selectedTasks.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {selectedTasks.map(taskId => {
-                  const task = availableTasks.find(t => t.id === taskId);
-                  return task ? (
-                    <Badge key={taskId} variant="secondary" className="text-xs">
-                      {task.title}
-                      <button
-                        type="button"
-                        onClick={() => toggleTaskSelection(taskId)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ) : null;
-                })}
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Link Habits (Optional)</Label>
-            <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-              {availableHabits.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No unique habits available to link</p>
-              ) : (
-                availableHabits.map(habit => (
-                  <div key={habit.id} className="flex items-center space-x-2 p-1 hover:bg-muted/30 rounded">
-                    <input
-                      type="checkbox"
-                      checked={selectedHabits.includes(habit.id)}
-                      onChange={() => toggleHabitSelection(habit.id)}
-                      className="rounded"
+          {availableTasks.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Link Tasks</label>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {availableTasks.map((task) => (
+                  <div key={task.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`task-${task.id}`}
+                      checked={linkedTaskIds.includes(task.id)}
+                      onCheckedChange={() => toggleTaskLink(task.id)}
                     />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate block">{habit.title}</span>
-                      <span className="text-xs text-muted-foreground">{habit.category} • {habit.recurrence}</span>
-                    </div>
+                    <label htmlFor={`task-${task.id}`} className="text-sm flex-1 flex items-center justify-between">
+                      <span>{task.title}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {task.category}
+                      </Badge>
+                    </label>
                   </div>
-                ))
-              )}
-            </div>
-            {selectedHabits.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {selectedHabits.map(habitId => {
-                  const habit = availableHabits.find(h => h.id === habitId);
-                  return habit ? (
-                    <Badge key={habitId} variant="secondary" className="text-xs">
-                      {habit.title}
-                      <button
-                        type="button"
-                        onClick={() => toggleHabitSelection(habitId)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ) : null;
-                })}
+                ))}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="startDate">Start Date</Label>
-            <Input
-              id="startDate"
-              type="date"
-              {...register('startDate', { required: 'Start date is required' })}
-            />
-            {errors.startDate && (
-              <p className="text-sm text-destructive">{errors.startDate.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="targetDate">Target Date (Optional)</Label>
-            <Input
-              id="targetDate"
-              type="date"
-              {...register('targetDate')}
-            />
-          </div>
+          {(linkedHabitIds.length > 0 || linkedTaskIds.length > 0) && (
+            <div className="text-xs text-muted-foreground p-2 bg-green-50 rounded border-l-2 border-green-200">
+              ✓ {linkedHabitIds.length + linkedTaskIds.length} items linked. Progress will auto-update when these are completed.
+            </div>
+          )}
         </div>
+      </div>
 
-        <div className="flex gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-            Cancel
-          </Button>
-          <Button type="submit" className="flex-1">
-            {initialGoal ? 'Update Goal' : 'Create Goal'}
-          </Button>
-        </div>
-      </form>
-    </div>
+      <div className="flex gap-2 pt-4">
+        <Button type="submit" className="flex-1">
+          {initialGoal ? 'Update Goal' : 'Create Goal'}
+        </Button>
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 }
