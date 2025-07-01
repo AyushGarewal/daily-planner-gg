@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, ChevronLeft, ChevronRight, List, Grid } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 import { TaskCard } from './TaskCard';
+import { RoutineTaskIntegration } from './RoutineTaskIntegration';
 import { 
   format, 
   startOfMonth, 
@@ -96,8 +98,9 @@ export function MonthlyTasksView() {
           {format(date, 'd')}
         </div>
         
+        {/* Regular Tasks */}
         <div className="space-y-1">
-          {dayTasks.slice(0, 3).map((task) => (
+          {dayTasks.slice(0, 2).map((task) => (
             <div
               key={task.id}
               className={`text-xs p-1 rounded truncate cursor-pointer transition-colors ${
@@ -115,11 +118,16 @@ export function MonthlyTasksView() {
             </div>
           ))}
           
-          {dayTasks.length > 3 && (
+          {dayTasks.length > 2 && (
             <div className="text-xs text-muted-foreground">
-              +{dayTasks.length - 3} more
+              +{dayTasks.length - 2} more
             </div>
           )}
+        </div>
+        
+        {/* Routine Tasks Indicator */}
+        <div className="mt-1">
+          <RoutineTaskIntegration showInMonthView={true} targetDate={date} />
         </div>
       </div>
     );
@@ -268,6 +276,11 @@ export function MonthlyTasksView() {
                     <Badge variant="outline">
                       {dateTasks.length} task{dateTasks.length !== 1 ? 's' : ''}
                     </Badge>
+                  </div>
+                  
+                  {/* Routine Tasks for this date */}
+                  <div className="mb-4">
+                    <RoutineTaskIntegration targetDate={new Date(dateKey)} />
                   </div>
                   
                   <div className="grid gap-3">

@@ -50,7 +50,7 @@ import { EnhancedDailyReflectionForm } from '../components/EnhancedDailyReflecti
 import { ChallengeTemplates } from '../components/ChallengeTemplates';
 import { EnhancedHabitPerformanceCalendar } from '../components/EnhancedHabitPerformanceCalendar';
 import { useDataReset } from '../hooks/useDataReset';
-import { RoutineHabitTracker } from '../components/RoutineHabitTracker';
+import { RoutineTaskIntegration } from '../components/RoutineTaskIntegration';
 
 const Index = () => {
   const { 
@@ -414,9 +414,9 @@ const Index = () => {
                   )}
                 </div>
                 
-                {/* Routine Habits Section */}
+                {/* Routine Tasks Section */}
                 <div className="mb-6">
-                  <RoutineHabitTracker showInTodayView={true} />
+                  <RoutineTaskIntegration showInTodayView={true} />
                 </div>
                 
                 {visibleTodaysTasks.length === 0 ? (
@@ -457,21 +457,21 @@ const Index = () => {
                           <span className="text-sm sm:text-base">{format(day, 'EEEE, MMM dd')}</span>
                           <div className="flex items-center gap-2">
                             {isToday && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">Today</span>}
-                            <span className="text-xs sm:text-sm text-muted-foreground">({dayTasks.length} tasks)</span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">
+                              {dayTasks.length} task{dayTasks.length !== 1 ? 's' : ''}
+                            </span>
                           </div>
                         </h3>
                         
-                        {/* Routine Habits for this day */}
-                        {isToday && (
-                          <div className="mb-4">
-                            <RoutineHabitTracker showInTodayView={true} />
-                          </div>
-                        )}
+                        {/* Routine Tasks for this day */}
+                        <div className="mb-4">
+                          <RoutineTaskIntegration showInWeekView={true} targetDate={day} />
+                        </div>
                         
                         {dayTasks.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No tasks scheduled</p>
+                          <p className="text-sm text-muted-foreground">No regular tasks scheduled</p>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="grid gap-2">
                             {getTasksWithProjects(dayTasks).map((task) => (
                               <TaskCard
                                 key={task.id}
@@ -685,7 +685,7 @@ const Index = () => {
             <DialogHeader>
               <DialogTitle>Edit Task</DialogTitle>
               <DialogDescription>
-                Make changes to your task or habit.
+                Make changes to your task.
               </DialogDescription>
             </DialogHeader>
             {editingTask && (
