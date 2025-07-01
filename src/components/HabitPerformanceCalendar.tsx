@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle2, Circle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, X, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isAfter, isBefore, startOfWeek, isToday, isSameMonth } from 'date-fns';
 
 export function HabitPerformanceCalendar() {
   const { tasks } = useTasks();
@@ -26,10 +26,21 @@ export function HabitPerformanceCalendar() {
 
   const selectedHabitData = habits.find(h => h.id === selectedHabit);
   
-  // Get all days in current month
+  // Get calendar days for full month view
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const calendarStart = startOfWeek(monthStart);
+  
+  // Create full calendar grid (6 weeks)
+  const calendarDays: Date[] = [];
+  let currentCalendarDate = new Date(calendarStart);
+  
+  for (let week = 0; week < 6; week++) {
+    for (let day = 0; day < 7; day++) {
+      calendarDays.push(new Date(currentCalendarDate));
+      currentCalendarDate.setDate(currentCalendarDate.getDate() + 1);
+    }
+  }
 
   // Get habit creation date
   const getHabitCreationDate = (habit: any) => {
@@ -85,30 +96,30 @@ export function HabitPerformanceCalendar() {
     if (!scheduled) return 'not-scheduled';
     
     const completed = isHabitCompletedOnDate(habit, date);
-    const isToday = isSameDay(date, new Date());
+    const isDateToday = isSameDay(date, new Date());
     const isFuture = isAfter(date, new Date());
     
     if (isFuture) return 'future';
     if (completed) return 'completed';
-    if (isToday) return 'today';
+    if (isDateToday) return 'today';
     return 'missed';
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-500 hover:bg-green-600';
-      case 'missed': return 'bg-red-500 hover:bg-red-600';
-      case 'today': return 'bg-blue-500 hover:bg-blue-600';
-      case 'future': return 'bg-gray-200 hover:bg-gray-300';
-      default: return 'bg-gray-100';
+      case 'completed': return 'bg-green-500 hover:bg-green-600 text-white';
+      case 'missed': return 'bg-red-500 hover:bg-red-600 text-white';
+      case 'today': return 'bg-blue-500 hover:bg-blue-600 text-white';
+      case 'future': return 'bg-gray-200 hover:bg-gray-300 text-gray-600';
+      default: return 'bg-gray-100 text-gray-400';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 className="h-3 w-3 text-white" />;
-      case 'missed': return <X className="h-3 w-3 text-white" />;
-      case 'today': return <Circle className="h-3 w-3 text-white" />;
+      case 'completed': return <CheckCircle2 className="h-3 w-3" />;
+      case 'missed': return <X className="h-3 w-3" />;
+      case 'today': return <Circle className="h-3 w-3" />;
       default: return null;
     }
   };
@@ -120,7 +131,9 @@ export function HabitPerformanceCalendar() {
     let missed = 0;
     let total = 0;
     
-    daysInMonth.forEach(date => {
+    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    
+    monthDays.forEach(date => {
       const status = getDayStatus(habit, date);
       if (status === 'completed') {
         completed++;
@@ -140,7 +153,9 @@ export function HabitPerformanceCalendar() {
   const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
+    if (getDayStatus(selectedHabitData, date) !== 'not-scheduled') {
+      setSelectedDate(date);
+    }
   };
 
   const getSelectedDateInfo = () => {
@@ -166,21 +181,49 @@ export function HabitPerformanceCalendar() {
 
   const selectedDateInfo = getSelectedDateInfo();
 
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => direction === 'prev' ? subMonths(prev, 1) : addMonths(prev, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentMonth(new Date());
+  };
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Habit Performance Calendar
-            </CardTitle>
-            
-            <div className="flex items-center gap-4">
-              {/* Habit Selector */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Habit Performance Calendar
+              </CardTitle>
+              
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={goToToday}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Today
+                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => navigateMonth('prev')}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[140px] text-center">
+                    {format(currentMonth, 'MMMM yyyy')}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => navigateMonth('next')}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Habit Selector */}
+            <div>
               <Select value={selectedHabit} onValueChange={setSelectedHabit}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Select a habit" />
+                <SelectTrigger className="w-full max-w-sm">
+                  <SelectValue placeholder="Select a habit to track" />
                 </SelectTrigger>
                 <SelectContent>
                   {habits.map((habit) => (
@@ -195,46 +238,27 @@ export function HabitPerformanceCalendar() {
                   ))}
                 </SelectContent>
               </Select>
-
-              {/* Month Navigation */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-32 text-center">
-                  {format(currentMonth, 'MMMM yyyy')}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
             </div>
+
+            {/* Stats Bar */}
+            {selectedHabitData && (
+              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm">Completed: {stats.completed}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm">Missed: {stats.missed}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-green-50 text-green-700">
+                    {completionRate}% completion rate
+                  </Badge>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Stats Bar */}
-          {selectedHabitData && (
-            <div className="flex items-center gap-4 mt-4 p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">Completed: {stats.completed}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="text-sm">Missed: {stats.missed}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{completionRate}% completion rate</Badge>
-              </div>
-            </div>
-          )}
         </CardHeader>
 
         <CardContent>
@@ -247,45 +271,48 @@ export function HabitPerformanceCalendar() {
           ) : (
             <div className="space-y-4">
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-2">
-                {/* Day headers */}
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                  <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
-                    {day}
-                  </div>
-                ))}
+              <div className="space-y-2">
+                {/* Weekday Headers */}
+                <div className="grid grid-cols-7 gap-1">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="p-2 text-center text-xs font-medium text-muted-foreground">
+                      {day}
+                    </div>
+                  ))}
+                </div>
                 
-                {/* Empty cells for days before month start */}
-                {Array.from({ length: monthStart.getDay() }, (_, i) => (
-                  <div key={`empty-${i}`} className="p-2"></div>
-                ))}
-                
-                {/* Calendar days */}
-                {daysInMonth.map(date => {
-                  const status = getDayStatus(selectedHabitData, date);
-                  const isSelected = selectedDate && isSameDay(date, selectedDate);
-                  
-                  return (
-                    <button
-                      key={date.toISOString()}
-                      onClick={() => handleDateClick(date)}
-                      className={`
-                        relative p-2 h-10 w-10 rounded-lg text-sm font-medium transition-all
-                        ${getStatusColor(status)} 
-                        ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}
-                        ${status === 'not-scheduled' ? 'cursor-default' : 'cursor-pointer'}
-                      `}
-                      disabled={status === 'not-scheduled'}
-                    >
-                      <span className={status === 'not-scheduled' ? 'text-muted-foreground' : 'text-white'}>
-                        {format(date, 'd')}
-                      </span>
-                      <div className="absolute top-0 right-0">
-                        {getStatusIcon(status)}
-                      </div>
-                    </button>
-                  );
-                })}
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((date, index) => {
+                    const status = getDayStatus(selectedHabitData, date);
+                    const isSelected = selectedDate && isSameDay(date, selectedDate);
+                    const isCurrentMonth = isSameMonth(date, currentMonth);
+                    const todayClass = isToday(date) ? 'ring-2 ring-primary ring-offset-1' : '';
+                    
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleDateClick(date)}
+                        className={`
+                          relative p-2 h-12 w-full rounded-lg text-xs font-medium transition-all
+                          ${getStatusColor(status)}
+                          ${isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}
+                          ${todayClass}
+                          ${status === 'not-scheduled' ? 'cursor-default' : 'cursor-pointer hover:scale-105'}
+                          ${isCurrentMonth ? '' : 'opacity-40'}
+                        `}
+                        disabled={status === 'not-scheduled'}
+                      >
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <span className="mb-1">{format(date, 'd')}</span>
+                          <div className="absolute top-1 right-1">
+                            {getStatusIcon(status)}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Legend */}
