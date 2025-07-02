@@ -202,7 +202,7 @@ export function NegativeHabits() {
               Add Your First Negative Habit
             </Button>
           </CardContent>
-        </Dialog>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {negativeHabits.map((habit) => {
