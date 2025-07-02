@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,16 +48,17 @@ export function LongTermGoals() {
     let totalTarget = 0;
     
     linkedHabits.forEach(habit => {
-      if (habit.numericTarget) {
-        totalTarget += habit.numericTarget;
-        // Count completed instances of this habit
-        const completedCount = tasks.filter(t => 
-          t.title === habit.title && 
-          t.type === 'habit' && 
-          t.completed
-        ).length;
-        totalProgress += Math.min(completedCount, habit.numericTarget);
-      }
+      // Use a default target if no specific target is set for habits
+      const habitTarget = 1; // Default target of 1 completion per habit
+      totalTarget += habitTarget;
+      
+      // Count completed instances of this habit
+      const completedCount = tasks.filter(t => 
+        t.title === habit.title && 
+        t.type === 'habit' && 
+        t.completed
+      ).length;
+      totalProgress += Math.min(completedCount, habitTarget);
     });
     
     if (totalTarget === 0) return null;

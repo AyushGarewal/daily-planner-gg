@@ -4,60 +4,45 @@ export interface Achievement {
   title: string;
   description: string;
   icon: string;
-  condition: (data: any) => boolean;
-  unlocked: boolean;
   unlockedAt?: Date;
-  isCustom?: boolean;
-  xpReward?: number;
-}
-
-export interface PowerUp {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  uses: number;
-  maxUses: number;
-  type: 'auto-complete' | 'double-xp' | 'streak-shield' | 'skip-token' | 'xp-multiplier';
+  isUnlocked: boolean;
+  category: 'streak' | 'xp' | 'task' | 'habit' | 'level' | 'special';
+  requirement: {
+    type: 'streak' | 'xp' | 'task_completion' | 'habit_completion' | 'level' | 'daily_completion' | 'special';
+    value: number;
+    description: string;
+  };
 }
 
 export interface SpinReward {
   id: string;
   title: string;
-  type: 'xp' | 'power-up' | 'streak-shield' | 'theme' | 'trophy' | 'quote';
+  type: 'xp' | 'power-up' | 'streak-shield' | 'xp-multiplier' | 'theme' | 'trophy' | 'quote';
   value: number | string;
   probability: number;
-  description?: string;
+  description: string;
 }
 
 export interface UserStats {
-  achievements: Achievement[];
-  powerUps: PowerUp[];
-  streakShields: number;
-  totalTasksCompleted: number;
-  earlyBirdCount: number;
-  lastSpinDate?: Date;
-  theme: string;
-  dailyUsage: DailyUsage[];
-  unlockedThemes: string[];
-  motivationQuotes: string[];
+  totalXP: number;
+  level: number;
+  currentStreak: number;
+  maxStreak: number;
+  tasksCompleted: number;
+  habitsCompleted: number;
+  achievementsUnlocked: number;
+  streakShieldsUsed: number;
+  powerUpsUsed: number;
+  dailyCompletionRate: number;
 }
 
-export interface DailyUsage {
-  date: string;
-  streakShield: boolean;
-  autoComplete: boolean;
-  skipToken: boolean;
-  spinUsed: boolean;
-}
-
-export interface CustomTrophyCondition {
-  type: 'streak' | 'tasks_completed' | 'early_bird' | 'level_reached' | 'category_tasks' | 'xp_gained' | 'completion_time';
-  value: number;
-  category?: string;
-  timeframe?: 'daily' | 'weekly' | 'monthly' | 'all_time';
-  operator?: 'gte' | 'lte' | 'eq';
-  tags?: string[];
+export interface PowerUp {
+  id: string;
+  type: 'auto-complete' | 'skip-token' | 'streak-shield' | 'xp-multiplier';
+  name: string;
+  description: string;
+  quantity: number;
+  usedToday?: boolean;
 }
 
 export interface CustomTrophy {
@@ -65,28 +50,7 @@ export interface CustomTrophy {
   name: string;
   description: string;
   icon: string;
-  conditions: CustomTrophyCondition[];
-  xpReward: number;
-  unlocked: boolean;
-  unlockedAt?: Date;
-  requiresAll?: boolean; // true = AND logic, false = OR logic
-}
-
-export interface Challenge {
-  id: string;
-  name: string;
-  description: string;
-  goal: string;
-  duration: number; // in days
-  startDate: Date;
-  endDate: Date;
-  progress: number;
-  completed: boolean;
-  xpReward: number;
-  badgeIcon: string;
-  conditions: {
-    type: 'completion_percentage' | 'task_count' | 'streak_days' | 'category_focus';
-    target: number;
-    category?: string;
-  }[];
+  color: string;
+  dateAwarded: Date;
+  category: 'personal' | 'achievement' | 'milestone' | 'custom';
 }

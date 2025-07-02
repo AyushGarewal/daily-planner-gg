@@ -13,7 +13,7 @@ import { useCustomCategories } from '../hooks/useCustomCategories';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
-import { getDay, isSameDay } from 'date-fns';
+import { getDay } from 'date-fns';
 
 export function SideHabitsPanel() {
   const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('sideHabits', []);
@@ -158,7 +158,7 @@ export function SideHabitsPanel() {
                     <Label>Days of the Week</Label>
                     <WeekdaySelector
                       selectedDays={newHabitWeekDays}
-                      onDaysChange={setNewHabitWeekDays}
+                      onChange={setNewHabitWeekDays}
                     />
                   </div>
                 )}
@@ -167,7 +167,8 @@ export function SideHabitsPanel() {
                   <Label>Subtasks (Optional)</Label>
                   <SubtaskManager
                     subtasks={newHabitSubtasks}
-                    onSubtasksChange={setNewHabitSubtasks}
+                    onSubtaskToggle={() => {}}
+                    isMainTaskCompleted={false}
                   />
                 </div>
                 

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Shield, Calendar, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Shield, Calendar } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
@@ -230,7 +230,7 @@ export function NegativeHabitsPanel() {
                     <Label>Days of the Week</Label>
                     <WeekdaySelector
                       selectedDays={newHabitWeekDays}
-                      onDaysChange={setNewHabitWeekDays}
+                      onChange={setNewHabitWeekDays}
                     />
                   </div>
                 )}
@@ -239,7 +239,8 @@ export function NegativeHabitsPanel() {
                   <Label>Subtasks (Optional)</Label>
                   <SubtaskManager
                     subtasks={newHabitSubtasks}
-                    onSubtasksChange={setNewHabitSubtasks}
+                    onSubtaskToggle={() => {}}
+                    isMainTaskCompleted={false}
                   />
                 </div>
                 

@@ -37,7 +37,7 @@ export const SPIN_REWARDS: SpinReward[] = [
   {
     id: 'xp-multiplier',
     title: 'XP Multiplier (1.5x)',
-    type: 'power-up',
+    type: 'xp-multiplier',
     value: 'xp-multiplier',
     probability: 0.10,
     description: '1.5x XP for the next hour'
