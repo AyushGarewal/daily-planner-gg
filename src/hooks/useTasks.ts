@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { Task, UserProgress, getCurrentLevel, getXPRequiredForLevel, DailyUsage } from '../types/task';
 import { useAchievements } from './useAchievements';
+import { useXPMultiplier } from './useXPMultiplier';
 import { addDays, isBefore, startOfDay, isSameDay, getDay, isAfter } from 'date-fns';
 
 export function useTasks() {
@@ -18,6 +18,7 @@ export function useTasks() {
   const [showLevelUp, setShowLevelUp] = useLocalStorage<number | null>('showLevelUp', null);
 
   const { userStats, useStreakShield } = useAchievements();
+  const { getActiveMultiplier } = useXPMultiplier();
 
   const addTask = (task: Omit<Task, 'id' | 'completed'>) => {
     const newTask: Task = {
@@ -125,16 +126,41 @@ export function useTasks() {
     try {
       const goals = JSON.parse(localStorage.getItem('goals') || '[]');
       const updatedGoals = goals.map((goal: any) => {
-        if (goal.id === task.goalId && goal.hasNumericTarget) {
-          const newProgress = (goal.currentProgress || 0) + 1;
-          const isCompleted = newProgress >= goal.numericTarget;
+        if (goal.id === task.goalId) {
+          // For linked habits, update based on habit completion
+          if (goal.linkedHabitIds && goal.linkedHabitIds.includes(task.id)) {
+            const linkedHabits = JSON.parse(localStorage.getItem('tasks') || '[]')
+              .filter((t: any) => goal.linkedHabitIds.includes(t.id) && t.type === 'habit');
+            
+            let totalProgress = 0;
+            linkedHabits.forEach((habit: any) => {
+              if (habit.numericTarget) {
+                const completedCount = JSON.parse(localStorage.getItem('tasks') || '[]')
+                  .filter((t: any) => t.title === habit.title && t.type === 'habit' && t.completed)
+                  .length;
+                totalProgress += Math.min(completedCount, habit.numericTarget);
+              }
+            });
+            
+            return {
+              ...goal,
+              currentProgress: totalProgress,
+              updatedAt: new Date()
+            };
+          }
           
-          return {
-            ...goal,
-            currentProgress: Math.min(newProgress, goal.numericTarget),
-            isCompleted,
-            updatedAt: new Date()
-          };
+          // For regular numeric targets
+          if (goal.hasNumericTarget) {
+            const newProgress = (goal.currentProgress || 0) + 1;
+            const isCompleted = newProgress >= goal.numericTarget;
+            
+            return {
+              ...goal,
+              currentProgress: Math.min(newProgress, goal.numericTarget),
+              isCompleted,
+              updatedAt: new Date()
+            };
+          }
         }
         return goal;
       });
@@ -162,9 +188,13 @@ export function useTasks() {
     // Update linked goals progress
     updateLinkedGoalsProgress(task);
 
+    // Apply XP multiplier if active
+    const multiplier = getActiveMultiplier();
+    const finalXP = Math.round(task.xpValue * multiplier);
+
     // Update progress with new level system
     setProgress(prev => {
-      const newTotalXP = prev.totalXP + task.xpValue;
+      const newTotalXP = prev.totalXP + finalXP;
       const oldLevel = getCurrentLevel(prev.totalXP);
       const newLevel = getCurrentLevel(newTotalXP);
       
@@ -207,8 +237,12 @@ export function useTasks() {
   };
 
   const addBonusXP = (amount: number) => {
+    // Apply XP multiplier if active
+    const multiplier = getActiveMultiplier();
+    const finalAmount = Math.round(amount * multiplier);
+    
     setProgress(prev => {
-      const newTotalXP = prev.totalXP + amount;
+      const newTotalXP = prev.totalXP + finalAmount;
       const oldLevel = getCurrentLevel(prev.totalXP);
       const newLevel = getCurrentLevel(newTotalXP);
       

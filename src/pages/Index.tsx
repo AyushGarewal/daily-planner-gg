@@ -28,6 +28,7 @@ import { SideHabitsPanel } from '../components/SideHabitsPanel';
 import { NegativeHabitsPanel } from '../components/NegativeHabitsPanel';
 import { WellnessLogging } from '../components/WellnessLogging';
 import { WellnessCalendar } from '../components/WellnessCalendar';
+import { SleepCalendar } from '../components/SleepCalendar';
 import { Task } from '../types/task';
 import { Achievement, SpinReward } from '../types/achievements';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
@@ -55,6 +56,7 @@ import { ChallengeTemplates } from '../components/ChallengeTemplates';
 import { EnhancedHabitPerformanceCalendar } from '../components/EnhancedHabitPerformanceCalendar';
 import { useDataReset } from '../hooks/useDataReset';
 import { RoutineTaskIntegration } from '../components/RoutineTaskIntegration';
+import { useXPMultiplier } from '../hooks/useXPMultiplier';
 
 const Index = () => {
   const { 
@@ -92,6 +94,8 @@ const Index = () => {
     recordSpin,
     setTheme
   } = useAchievements();
+
+  const { activateMultiplier } = useXPMultiplier();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -231,6 +235,9 @@ const Index = () => {
         break;
       case 'streak-shield':
         addStreakShield(reward.value as number);
+        break;
+      case 'xp-multiplier':
+        activateMultiplier(1.5, 1); // 1.5x multiplier for 1 hour
         break;
       case 'quote':
         const quotes = JSON.parse(localStorage.getItem('motivationQuotes') || '[]');
@@ -550,7 +557,20 @@ const Index = () => {
 
             {activeTab === 'sleep' && (
               <div className="animate-fade-in">
-                <SleepTracker />
+                <Tabs defaultValue="tracker" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="tracker">Sleep Tracker</TabsTrigger>
+                    <TabsTrigger value="calendar">Sleep Calendar</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="tracker">
+                    <SleepTracker />
+                  </TabsContent>
+                  
+                  <TabsContent value="calendar">
+                    <SleepCalendar />
+                  </TabsContent>
+                </Tabs>
               </div>
             )}
 

@@ -6,31 +6,47 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2, Calendar } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-
-interface SideHabit {
-  id: string;
-  name: string;
-  completedDates: string[];
-}
+import { useCustomCategories } from '../hooks/useCustomCategories';
+import { WeekdaySelector } from './WeekdaySelector';
+import { SubtaskManager } from './SubtaskManager';
+import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
+import { getDay, isSameDay } from 'date-fns';
 
 export function SideHabitsPanel() {
   const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('sideHabits', []);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
-
+  const [newHabitCategory, setNewHabitCategory] = useState('');
+  const [newHabitRecurrence, setNewHabitRecurrence] = useState<'None' | 'Daily' | 'Weekly'>('None');
+  const [newHabitWeekDays, setNewHabitWeekDays] = useState<number[]>([]);
+  const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
+  
+  const { categories } = useCustomCategories();
   const today = new Date().toDateString();
 
   const addSideHabit = () => {
-    if (newHabitName.trim()) {
+    if (newHabitName.trim() && newHabitCategory) {
       const newHabit: SideHabit = {
         id: `side_habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: newHabitName.trim(),
-        completedDates: []
+        category: newHabitCategory,
+        completedDates: [],
+        recurrence: newHabitRecurrence,
+        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
+        subtasks: newHabitSubtasks,
+        createdAt: new Date()
       };
       setSideHabits(prev => [...prev, newHabit]);
+      
+      // Reset form
       setNewHabitName('');
+      setNewHabitCategory('');
+      setNewHabitRecurrence('None');
+      setNewHabitWeekDays([]);
+      setNewHabitSubtasks([]);
       setIsFormOpen(false);
     }
   };
@@ -50,9 +66,35 @@ export function SideHabitsPanel() {
     }));
   };
 
+  const toggleSubtask = (habitId: string, subtaskId: string) => {
+    setSideHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const updatedSubtasks = habit.subtasks.map(subtask =>
+          subtask.id === subtaskId 
+            ? { ...subtask, completed: !subtask.completed }
+            : subtask
+        );
+        return { ...habit, subtasks: updatedSubtasks };
+      }
+      return habit;
+    }));
+  };
+
   const deleteSideHabit = (habitId: string) => {
     setSideHabits(prev => prev.filter(habit => habit.id !== habitId));
   };
+
+  const shouldShowHabitToday = (habit: SideHabit) => {
+    if (habit.recurrence === 'None') return true;
+    if (habit.recurrence === 'Daily') return true;
+    if (habit.recurrence === 'Weekly' && habit.weekDays) {
+      const todayWeekday = getDay(new Date());
+      return habit.weekDays.includes(todayWeekday);
+    }
+    return true;
+  };
+
+  const todaysHabits = sideHabits.filter(shouldShowHabitToday);
 
   return (
     <Card>
@@ -66,7 +108,7 @@ export function SideHabitsPanel() {
                 Add Side Habit
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Side Habit</DialogTitle>
               </DialogHeader>
@@ -80,6 +122,55 @@ export function SideHabitsPanel() {
                     placeholder="Enter habit name..."
                   />
                 </div>
+                
+                <div>
+                  <Label htmlFor="habitCategory">Category</Label>
+                  <Select value={newHabitCategory} onValueChange={setNewHabitCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="recurrence">Recurrence</Label>
+                  <Select value={newHabitRecurrence} onValueChange={(value: 'None' | 'Daily' | 'Weekly') => setNewHabitRecurrence(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="Daily">Daily</SelectItem>
+                      <SelectItem value="Weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {newHabitRecurrence === 'Weekly' && (
+                  <div>
+                    <Label>Days of the Week</Label>
+                    <WeekdaySelector
+                      selectedDays={newHabitWeekDays}
+                      onDaysChange={setNewHabitWeekDays}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label>Subtasks (Optional)</Label>
+                  <SubtaskManager
+                    subtasks={newHabitSubtasks}
+                    onSubtasksChange={setNewHabitSubtasks}
+                  />
+                </div>
+                
                 <div className="flex gap-2">
                   <Button onClick={addSideHabit} className="flex-1">
                     Add Habit
@@ -97,34 +188,65 @@ export function SideHabitsPanel() {
         </p>
       </CardHeader>
       <CardContent>
-        {sideHabits.length === 0 ? (
+        {todaysHabits.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No side habits yet.</p>
+            <p className="text-sm">No side habits for today.</p>
             <p className="text-xs">Add habits to track without affecting your main progress.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {sideHabits.map((habit) => {
+            {todaysHabits.map((habit) => {
               const isCompleted = habit.completedDates.includes(today);
+              const allSubtasksCompleted = habit.subtasks.length === 0 || habit.subtasks.every(st => st.completed);
+              
               return (
-                <div key={habit.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Checkbox
-                      checked={isCompleted}
-                      onCheckedChange={() => toggleHabitCompletion(habit.id)}
-                    />
-                    <span className={`${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                      {habit.name}
-                    </span>
+                <div key={habit.id} className="p-3 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        checked={isCompleted}
+                        onCheckedChange={() => toggleHabitCompletion(habit.id)}
+                      />
+                      <div>
+                        <span className={`${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                          {habit.name}
+                        </span>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>{habit.category}</span>
+                          {habit.recurrence !== 'None' && (
+                            <>
+                              <Calendar className="h-3 w-3" />
+                              <span>{habit.recurrence}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteSideHabit(habit.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteSideHabit(habit.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  
+                  {habit.subtasks.length > 0 && (
+                    <div className="ml-6 space-y-2">
+                      {habit.subtasks.map((subtask) => (
+                        <div key={subtask.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={subtask.completed}
+                            onCheckedChange={() => toggleSubtask(habit.id, subtask.id)}
+                          />
+                          <span className={`text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
+                            {subtask.title}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -2,10 +2,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, CheckCircle2, Circle, Calendar, Target } from 'lucide-react';
+import { Plus, Target } from 'lucide-react';
 import { TaskForm } from './TaskForm';
 import { TaskCard } from './TaskCard';
 import { useTasks } from '../hooks/useTasks';
@@ -18,7 +17,6 @@ interface ProjectTaskIntegrationProps {
   onTaskComplete?: (taskId: string) => void;
   onTaskEdit?: (task: Task) => void;
   onTaskDelete?: (taskId: string) => void;
-  onProgressUpdate?: (completed: number, total: number) => void;
 }
 
 export function ProjectTaskIntegration({ 
@@ -27,8 +25,7 @@ export function ProjectTaskIntegration({
   projectColor, 
   onTaskComplete,
   onTaskEdit,
-  onTaskDelete,
-  onProgressUpdate
+  onTaskDelete
 }: ProjectTaskIntegrationProps) {
   const { tasks, addTask, completeTask, updateTask, deleteTask, toggleSubtask } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -36,17 +33,6 @@ export function ProjectTaskIntegration({
 
   // Get tasks for this project
   const projectTasks = tasks.filter(task => task.projectId === projectId);
-  const completedTasks = projectTasks.filter(task => task.completed);
-  const progressPercentage = projectTasks.length > 0 
-    ? Math.round((completedTasks.length / projectTasks.length) * 100)
-    : 0;
-
-  // Notify parent component of progress updates
-  React.useEffect(() => {
-    if (onProgressUpdate) {
-      onProgressUpdate(completedTasks.length, projectTasks.length);
-    }
-  }, [completedTasks.length, projectTasks.length, onProgressUpdate]);
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     const taskWithProject = {
@@ -126,7 +112,7 @@ export function ProjectTaskIntegration({
           <div className="text-center py-8 text-muted-foreground">
             <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm mb-2">No tasks in this project yet</p>
-            <p className="text-xs">Add tasks to track progress toward your project goals</p>
+            <p className="text-xs">Add tasks to organize your project work</p>
           </div>
         ) : (
           <div className="space-y-3">

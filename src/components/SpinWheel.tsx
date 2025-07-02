@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Gift, Sparkles, X, Trophy, Star } from 'lucide-react';
 import { SPIN_REWARDS } from '../data/spinRewards';
 import { SpinReward } from '../types/achievements';
+import { useXPMultiplier } from '../hooks/useXPMultiplier';
 
 interface SpinWheelProps {
   onReward: (reward: SpinReward) => void;
@@ -15,6 +17,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState<SpinReward | null>(null);
   const [spinRotation, setSpinRotation] = useState(0);
+  const { activateMultiplier } = useXPMultiplier();
 
   const handleSpin = () => {
     setIsSpinning(true);
@@ -41,6 +44,12 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
     setTimeout(() => {
       setIsSpinning(false);
       setResult(selectedReward);
+      
+      // Handle XP multiplier reward
+      if (selectedReward.type === 'xp-multiplier') {
+        activateMultiplier(1.5, 1); // 1.5x multiplier for 1 hour
+      }
+      
       onReward(selectedReward);
     }, 3000);
   };
@@ -56,6 +65,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
       case 'xp': return '⭐';
       case 'power-up': return '⚡';
       case 'streak-shield': return '🛡️';
+      case 'xp-multiplier': return '🔥';
       default: return '🎁';
     }
   };

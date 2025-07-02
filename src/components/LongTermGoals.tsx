@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Plus, Target, Calendar, TrendingUp, Trophy, Link, Edit } from 'lucide-react';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
@@ -35,40 +34,41 @@ export function LongTermGoals() {
     }
   };
 
-  const calculateNumericProgress = (goal: Goal) => {
-    if (!goal.hasNumericTarget || !goal.numericTarget) return null;
+  const calculateLinkedHabitsProgress = (goal: Goal) => {
+    if (!goal.linkedHabitIds || goal.linkedHabitIds.length === 0) return null;
     
-    let currentProgress = goal.currentProgress || 0;
+    // Get all linked habits
+    const linkedHabits = tasks.filter(task => 
+      goal.linkedHabitIds!.includes(task.id) && task.type === 'habit'
+    );
     
-    // Calculate from linked tasks/habits completion if no manual progress set
-    if (currentProgress === 0) {
-      let completedCount = 0;
-      
-      // Count completed linked tasks
-      if (goal.linkedTaskIds && goal.linkedTaskIds.length > 0) {
-        const linkedTasks = tasks.filter(task => 
-          goal.linkedTaskIds!.includes(task.id) && task.completed
-        );
-        completedCount += linkedTasks.length;
+    if (linkedHabits.length === 0) return null;
+    
+    // Calculate total progress from all linked habits
+    let totalProgress = 0;
+    let totalTarget = 0;
+    
+    linkedHabits.forEach(habit => {
+      if (habit.numericTarget) {
+        totalTarget += habit.numericTarget;
+        // Count completed instances of this habit
+        const completedCount = tasks.filter(t => 
+          t.title === habit.title && 
+          t.type === 'habit' && 
+          t.completed
+        ).length;
+        totalProgress += Math.min(completedCount, habit.numericTarget);
       }
-      
-      // Count completed linked habits
-      if (goal.linkedHabitIds && goal.linkedHabitIds.length > 0) {
-        const linkedHabits = tasks.filter(task => 
-          goal.linkedHabitIds!.includes(task.id) && task.completed && task.type === 'habit'
-        );
-        completedCount += linkedHabits.length;
-      }
-      
-      currentProgress = Math.min(completedCount, goal.numericTarget);
-    }
+    });
     
-    const percentage = goal.numericTarget > 0 ? Math.round((currentProgress / goal.numericTarget) * 100) : 0;
+    if (totalTarget === 0) return null;
     
-    return { 
-      current: currentProgress, 
-      target: goal.numericTarget, 
-      percentage: Math.min(percentage, 100) 
+    const percentage = Math.round((totalProgress / totalTarget) * 100);
+    
+    return {
+      current: totalProgress,
+      target: totalTarget,
+      percentage: Math.min(percentage, 100)
     };
   };
 
@@ -81,18 +81,23 @@ export function LongTermGoals() {
   };
 
   const handleProgressUpdate = (goal: Goal) => {
-    setEditingGoalProgress(goal);
-    setNewProgressValue(goal.currentProgress?.toString() || '0');
+    const linkedProgress = calculateLinkedHabitsProgress(goal);
+    if (linkedProgress) {
+      setEditingGoalProgress(goal);
+      setNewProgressValue(linkedProgress.current.toString());
+    }
   };
 
   const updateGoalProgress = () => {
     if (editingGoalProgress && newProgressValue) {
       const newProgress = parseInt(newProgressValue);
       if (!isNaN(newProgress) && newProgress >= 0) {
-        updateGoal(editingGoalProgress.id, {
-          currentProgress: Math.min(newProgress, editingGoalProgress.numericTarget || 0),
-          isCompleted: newProgress >= (editingGoalProgress.numericTarget || 0)
-        });
+        const linkedProgress = calculateLinkedHabitsProgress(editingGoalProgress);
+        if (linkedProgress) {
+          updateGoal(editingGoalProgress.id, {
+            currentProgress: Math.min(newProgress, linkedProgress.target)
+          });
+        }
       }
       setEditingGoalProgress(null);
       setNewProgressValue('');
@@ -141,7 +146,7 @@ export function LongTermGoals() {
         <div className="space-y-6">
           {goals.map((goal) => {
             const progress = getGoalProgress(goal.id);
-            const numericProgress = calculateNumericProgress(goal);
+            const linkedHabitsProgress = calculateLinkedHabitsProgress(goal);
             
             return (
               <Card key={goal.id} className="w-full">
@@ -154,12 +159,6 @@ export function LongTermGoals() {
                       </Badge>
                     </div>
                     <div className="flex gap-1">
-                      {goal.hasNumericTarget && (
-                        <Badge variant="outline" className="text-xs bg-purple-50">
-                          <Trophy className="h-3 w-3 mr-1" />
-                          Target
-                        </Badge>
-                      )}
                       {((goal.linkedTaskIds?.length || 0) + (goal.linkedHabitIds?.length || 0)) > 0 && (
                         <Badge variant="outline" className="text-xs bg-blue-50">
                           <Link className="h-3 w-3 mr-1" />
@@ -180,13 +179,13 @@ export function LongTermGoals() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Dual Progress Tracking */}
+                  {/* Progress Tracking */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Numeric Progress */}
-                    {numericProgress && (
+                    {/* Linked Habits Progress */}
+                    {linkedHabitsProgress && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Numeric Target Progress</span>
+                          <span className="text-sm font-medium">Linked Habits Progress</span>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -198,13 +197,13 @@ export function LongTermGoals() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
-                            {numericProgress.current} / {numericProgress.target} {goal.targetUnit}
+                            {linkedHabitsProgress.current} / {linkedHabitsProgress.target} completed
                           </span>
                           <span className="text-muted-foreground">
-                            {numericProgress.percentage}%
+                            {linkedHabitsProgress.percentage}%
                           </span>
                         </div>
-                        <Progress value={numericProgress.percentage} className="h-3" />
+                        <Progress value={linkedHabitsProgress.percentage} className="h-3" />
                       </div>
                     )}
                     
@@ -241,14 +240,6 @@ export function LongTermGoals() {
                       projectId={goal.id}
                       projectName={goal.title}
                       projectColor={getCategoryColor(goal.category).replace('bg-', '')}
-                      onProgressUpdate={(completed, total) => {
-                        // Update goal progress when tasks are completed
-                        if (goal.hasNumericTarget) {
-                          updateGoal(goal.id, {
-                            currentProgress: Math.min(completed, goal.numericTarget || 0)
-                          });
-                        }
-                      }}
                     />
                   </div>
                   
@@ -297,7 +288,7 @@ export function LongTermGoals() {
               />
               {editingGoalProgress && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Target: {editingGoalProgress.numericTarget} {editingGoalProgress.targetUnit}
+                  Based on linked habits completion
                 </p>
               )}
             </div>
