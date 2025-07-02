@@ -13,7 +13,7 @@ interface Progress {
   dailyCompletionRate: number;
   currentStreak: number;
   longestStreak: number;
-  maxStreak: number; // Added missing property
+  maxStreak: number;
 }
 
 interface DailyUsage {
@@ -33,7 +33,7 @@ export function useTasks() {
     dailyCompletionRate: 0,
     currentStreak: 0,
     longestStreak: 0,
-    maxStreak: 0, // Added missing property
+    maxStreak: 0,
   });
   const [bonusXP, setBonusXP] = useLocalStorage<number>('bonusXP', 0);
   const [dailyUsage, setDailyUsage] = useLocalStorage<DailyUsage>('dailyUsage', {
@@ -69,13 +69,31 @@ export function useTasks() {
     setTasks(prev => {
       const updatedTasks = prev.map(task => {
         if (task.id === id) {
-          const xpReward = task.xpValue || 10;
           const isHabit = task.type === 'habit';
+          let xpReward = task.xpValue || 10;
+          
+          // Calculate XP based on subtask completion for habits
+          if (isHabit && task.subtasks && task.subtasks.length > 0) {
+            const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+            const totalSubtasks = task.subtasks.length;
+            const completionPercentage = completedSubtasks / totalSubtasks;
+            
+            // Only award full XP and count for streak if ALL subtasks are completed
+            if (completionPercentage === 1) {
+              xpReward = task.xpValue || 10;
+            } else {
+              // Award partial XP based on completion percentage
+              xpReward = Math.round((task.xpValue || 10) * completionPercentage);
+            }
+          }
+          
+          // Apply XP multiplier
+          const finalXP = applyMultiplier(xpReward);
           
           // Update progress stats
           setProgress(p => ({
             ...p,
-            totalXP: p.totalXP + xpReward,
+            totalXP: p.totalXP + finalXP,
             tasksCompleted: p.tasksCompleted + 1,
             habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
           }));
@@ -113,9 +131,19 @@ export function useTasks() {
     setDailyUsage(prev => ({ ...prev, [type]: true }));
   };
 
-  // Add getUserHabits method
   const getUserHabits = (): Task[] => {
-    return tasks.filter(task => task.type === 'habit');
+    // Remove duplicates by creating a Map with unique titles
+    const uniqueHabits = new Map();
+    
+    tasks
+      .filter(task => task.type === 'habit')
+      .forEach(habit => {
+        if (!uniqueHabits.has(habit.title) || !uniqueHabits.get(habit.title).completed) {
+          uniqueHabits.set(habit.title, habit);
+        }
+      });
+    
+    return Array.from(uniqueHabits.values());
   };
 
   useEffect(() => {
@@ -205,7 +233,7 @@ export function useTasks() {
         case 'xpValue':
           return (b.xpValue || 0) - (a.xpValue || 0);
         case 'priority':
-          const priorityOrder = { high: 1, medium: 2, low: 3 };
+          const priorityOrder = { High: 1, Medium: 2, Low: 3 };
           return (priorityOrder[a.priority] || 4) - (priorityOrder[b.priority] || 4);
         default:
           return 0;
@@ -258,6 +286,6 @@ export function useTasks() {
     getTasksForDate,
     filterTasks,
     sortTasks,
-    getUserHabits // Add the missing method
+    getUserHabits
   };
 }

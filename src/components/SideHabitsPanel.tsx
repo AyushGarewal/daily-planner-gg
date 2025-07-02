@@ -67,9 +67,19 @@ export function SideHabitsPanel() {
             : [...habit.completedDates, today]
         };
         
-        // Add XP if completing for the first time today
+        // Calculate XP based on subtask completion if applicable
         if (!isCompleted && habit.xpValue) {
-          addBonusXP(habit.xpValue);
+          let xpToAdd = habit.xpValue;
+          
+          if (habit.subtasks.length > 0) {
+            const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
+            const completionPercentage = completedSubtasks / habit.subtasks.length;
+            xpToAdd = Math.round(habit.xpValue * completionPercentage);
+          }
+          
+          if (xpToAdd > 0) {
+            addBonusXP(xpToAdd);
+          }
         }
         
         return updatedHabit;
@@ -104,6 +114,31 @@ export function SideHabitsPanel() {
       return habit.weekDays.includes(todayWeekday);
     }
     return true;
+  };
+
+  const addNewSubtask = () => {
+    const newSubtask: SideHabitSubtask = {
+      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: '',
+      completed: false
+    };
+    setNewHabitSubtasks(prev => [...prev, newSubtask]);
+  };
+
+  const updateSubtask = (subtaskId: string, title: string) => {
+    setNewHabitSubtasks(prev => prev.map(subtask =>
+      subtask.id === subtaskId ? { ...subtask, title } : subtask
+    ));
+  };
+
+  const removeSubtask = (subtaskId: string) => {
+    setNewHabitSubtasks(prev => prev.filter(subtask => subtask.id !== subtaskId));
+  };
+
+  const getCompletionPercentage = (habit: SideHabit) => {
+    if (habit.subtasks.length === 0) return 100;
+    const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
+    return Math.round((completedSubtasks / habit.subtasks.length) * 100);
   };
 
   const todaysHabits = sideHabits.filter(shouldShowHabitToday);
@@ -189,11 +224,36 @@ export function SideHabitsPanel() {
 
                 <div>
                   <Label>Subtasks (Optional)</Label>
-                  <SubtaskManager
-                    subtasks={newHabitSubtasks}
-                    onSubtaskToggle={() => {}}
-                    isMainTaskCompleted={false}
-                  />
+                  <div className="space-y-2">
+                    {newHabitSubtasks.map((subtask) => (
+                      <div key={subtask.id} className="flex items-center gap-2">
+                        <Input
+                          value={subtask.title}
+                          onChange={(e) => updateSubtask(subtask.id, e.target.value)}
+                          placeholder="Subtask title..."
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSubtask(subtask.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addNewSubtask}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Subtask
+                    </Button>
+                  </div>
                 </div>
                 
                 <div className="flex gap-2">
@@ -222,7 +282,7 @@ export function SideHabitsPanel() {
           <div className="space-y-3">
             {todaysHabits.map((habit) => {
               const isCompleted = habit.completedDates.includes(today);
-              const allSubtasksCompleted = habit.subtasks.length === 0 || habit.subtasks.every(st => st.completed);
+              const completionPercentage = getCompletionPercentage(habit);
               
               return (
                 <div key={habit.id} className="p-3 border rounded-lg space-y-3">
@@ -249,6 +309,9 @@ export function SideHabitsPanel() {
                               <Star className="h-3 w-3" />
                               <span>+{habit.xpValue} XP</span>
                             </>
+                          )}
+                          {habit.subtasks.length > 0 && (
+                            <span>({completionPercentage}% complete)</span>
                           )}
                         </div>
                       </div>

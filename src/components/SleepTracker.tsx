@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Moon, Sun, Plus, TrendingUp, Clock, Calendar } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { SleepRecord, SleepStats } from '../types/sleep';
 import { format, subDays, parseISO, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { SleepCalendar } from './SleepCalendar';
 
 export function SleepTracker() {
   const [sleepRecords, setSleepRecords] = useLocalStorage<SleepRecord[]>('sleepRecords', []);
@@ -116,7 +117,7 @@ export function SleepTracker() {
       averageBedtime: formatTime(avgBedtimeMin),
       averageWakeTime: formatTime(avgWakeTimeMin),
       sleepConsistency: Math.round(consistency),
-      weeklyTrend: 'stable', // Simplified for now
+      weeklyTrend: 'stable',
     };
   }, [sleepRecords]);
 
@@ -272,109 +273,122 @@ export function SleepTracker() {
         </Dialog>
       </div>
 
-      {/* Sleep Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Clock className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-              <div className="text-2xl font-bold">{sleepStats.averageSleepDuration}h</div>
-              <p className="text-sm text-muted-foreground">Avg Sleep</p>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6">
+          {/* Sleep Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <Clock className="h-8 w-8 mx-auto mb-2 text-blue-500" />
+                  <div className="text-2xl font-bold">{sleepStats.averageSleepDuration}h</div>
+                  <p className="text-sm text-muted-foreground">Avg Sleep</p>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Moon className="h-8 w-8 mx-auto mb-2 text-indigo-500" />
-              <div className="text-2xl font-bold">{sleepStats.averageBedtime}</div>
-              <p className="text-sm text-muted-foreground">Avg Bedtime</p>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <Moon className="h-8 w-8 mx-auto mb-2 text-indigo-500" />
+                  <div className="text-2xl font-bold">{sleepStats.averageBedtime}</div>
+                  <p className="text-sm text-muted-foreground">Avg Bedtime</p>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Sun className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-              <div className="text-2xl font-bold">{sleepStats.averageWakeTime}</div>
-              <p className="text-sm text-muted-foreground">Avg Wake Time</p>
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <Sun className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
+                  <div className="text-2xl font-bold">{sleepStats.averageWakeTime}</div>
+                  <p className="text-sm text-muted-foreground">Avg Wake Time</p>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-green-500" />
-              <div className="text-2xl font-bold">{sleepStats.sleepConsistency}%</div>
-              <p className="text-sm text-muted-foreground">Consistency</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Weekly Sleep Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Weekly Sleep Pattern</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis domain={[0, 12]} />
-                <Tooltip 
-                  formatter={(hours: number) => [`${hours}h`, 'Sleep Duration']}
-                  labelFormatter={(day) => `${day}`}
-                />
-                <Bar dataKey="duration" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <TrendingUp className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <div className="text-2xl font-bold">{sleepStats.sleepConsistency}%</div>
+                  <p className="text-sm text-muted-foreground">Consistency</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Recent Sleep Records */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Sleep Records</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentRecords.map((record) => (
-              <div key={record.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl">{getQualityIcon(record.sleepQuality || 'good')}</div>
-                  <div>
-                    <p className="font-medium">{format(parseISO(record.date), 'MMM dd, yyyy')}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {record.bedtime} → {record.wakeTime} • {record.sleepDuration}h
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={`${getQualityColor(record.sleepQuality || 'good')} text-white border-none`}>
-                    {record.sleepQuality}
-                  </Badge>
-                </div>
+          {/* Weekly Sleep Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly Sleep Pattern</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis domain={[0, 12]} />
+                    <Tooltip 
+                      formatter={(hours: number) => [`${hours}h`, 'Sleep Duration']}
+                      labelFormatter={(day) => `${day}`}
+                    />
+                    <Bar dataKey="duration" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
-          
-          {recentRecords.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Moon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <p>No sleep records yet</p>
-              <p className="text-sm">Start logging your sleep to track your patterns!</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* Recent Sleep Records */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Sleep Records</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentRecords.map((record) => (
+                  <div key={record.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">{getQualityIcon(record.sleepQuality || 'good')}</div>
+                      <div>
+                        <p className="font-medium">{format(parseISO(record.date), 'MMM dd, yyyy')}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {record.bedtime} → {record.wakeTime} • {record.sleepDuration}h
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`${getQualityColor(record.sleepQuality || 'good')} text-white border-none`}>
+                        {record.sleepQuality}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {recentRecords.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Moon className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p>No sleep records yet</p>
+                  <p className="text-sm">Start logging your sleep to track your patterns!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="calendar">
+          <SleepCalendar />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

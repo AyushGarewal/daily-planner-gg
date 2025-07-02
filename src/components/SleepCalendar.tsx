@@ -7,7 +7,7 @@ import { SleepRecord } from '../types/sleep';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns';
 
 export function SleepCalendar() {
-  const [sleepRecords] = useLocalStorage<SleepRecord[]>('sleep-records', []);
+  const [sleepRecords] = useLocalStorage<SleepRecord[]>('sleepRecords', []);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedRecord, setSelectedRecord] = useState<SleepRecord | null>(null);
 
