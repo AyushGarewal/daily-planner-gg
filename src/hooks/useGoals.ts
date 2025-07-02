@@ -16,7 +16,7 @@ export function useGoals() {
       isCompleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
-      currentProgress: 0
+      milestones: goalData.milestones || []
     };
     setGoals(prev => [...prev, newGoal]);
     return newGoal;
@@ -97,32 +97,51 @@ export function useGoals() {
     const completedSubtasks = goalSubtasks.filter(s => s.isCompleted).length;
     const percentage = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
 
+    // Calculate linked habits progress
+    let linkedHabitsProgress = undefined;
+    if (goal?.linkedHabitIds && goal.linkedHabitIds.length > 0) {
+      try {
+        const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+        const linkedHabits = tasks.filter((task: any) => 
+          goal.linkedHabitIds!.includes(task.id) && task.type === 'habit'
+        );
+        
+        if (linkedHabits.length > 0) {
+          let totalTarget = 0;
+          let currentProgress = 0;
+          
+          linkedHabits.forEach((habit: any) => {
+            const habitTarget = habit.numericTarget || 1;
+            totalTarget += habitTarget;
+            
+            const completedCount = tasks.filter((t: any) => 
+              t.title === habit.title && 
+              t.type === 'habit' && 
+              t.completed
+            ).length;
+            currentProgress += Math.min(completedCount, habitTarget);
+          });
+          
+          if (totalTarget > 0) {
+            linkedHabitsProgress = {
+              current: currentProgress,
+              target: totalTarget,
+              percentage: Math.round((currentProgress / totalTarget) * 100)
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating linked habits progress:', error);
+      }
+    }
+
     return {
       goalId,
       totalSubtasks,
       completedSubtasks,
       percentage,
-      numericProgress: goal?.currentProgress || 0,
-      numericTarget: goal?.numericTarget
+      linkedHabitsProgress
     };
-  };
-
-  const updateGoalProgress = (goalId: string, progress: number) => {
-    const goal = goals.find(g => g.id === goalId);
-    if (goal && goal.hasNumericTarget) {
-      updateGoal(goalId, { 
-        currentProgress: Math.min(progress, goal.numericTarget || 0),
-        isCompleted: progress >= (goal.numericTarget || 0)
-      });
-    }
-  };
-
-  const incrementGoalProgress = (goalId: string, amount: number = 1) => {
-    const goal = goals.find(g => g.id === goalId);
-    if (goal && goal.hasNumericTarget) {
-      const newProgress = (goal.currentProgress || 0) + amount;
-      updateGoalProgress(goalId, newProgress);
-    }
   };
 
   const getMilestonesForGoal = (goalId: string) => {
@@ -150,8 +169,6 @@ export function useGoals() {
     addSubtask,
     updateSubtask,
     getGoalProgress,
-    updateGoalProgress,
-    incrementGoalProgress,
     getMilestonesForGoal,
     getSubtasksForMilestone,
     getJournalEntriesForGoal

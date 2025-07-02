@@ -1,12 +1,11 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Plus, Target, Calendar, TrendingUp, Trophy, Link, Edit } from 'lucide-react';
+import { Plus, Target, Calendar, TrendingUp, Trophy, Link, CheckCircle } from 'lucide-react';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
 import { GoalForm } from './GoalForm';
@@ -20,8 +19,6 @@ export function LongTermGoals() {
   const { tasks } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-  const [editingGoalProgress, setEditingGoalProgress] = useState<Goal | null>(null);
-  const [newProgressValue, setNewProgressValue] = useState('');
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -48,8 +45,7 @@ export function LongTermGoals() {
     let totalTarget = 0;
     
     linkedHabits.forEach(habit => {
-      // Use a default target if no specific target is set for habits
-      const habitTarget = 1; // Default target of 1 completion per habit
+      const habitTarget = habit.numericTarget || 1;
       totalTarget += habitTarget;
       
       // Count completed instances of this habit
@@ -78,30 +74,6 @@ export function LongTermGoals() {
 
   const handleGoalClick = (goal: Goal) => {
     setSelectedGoal(goal);
-  };
-
-  const handleProgressUpdate = (goal: Goal) => {
-    const linkedProgress = calculateLinkedHabitsProgress(goal);
-    if (linkedProgress) {
-      setEditingGoalProgress(goal);
-      setNewProgressValue(linkedProgress.current.toString());
-    }
-  };
-
-  const updateGoalProgress = () => {
-    if (editingGoalProgress && newProgressValue) {
-      const newProgress = parseInt(newProgressValue);
-      if (!isNaN(newProgress) && newProgress >= 0) {
-        const linkedProgress = calculateLinkedHabitsProgress(editingGoalProgress);
-        if (linkedProgress) {
-          updateGoal(editingGoalProgress.id, {
-            currentProgress: Math.min(newProgress, linkedProgress.target)
-          });
-        }
-      }
-      setEditingGoalProgress(null);
-      setNewProgressValue('');
-    }
   };
 
   return (
@@ -186,14 +158,6 @@ export function LongTermGoals() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">Linked Habits Progress</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleProgressUpdate(goal)}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
@@ -219,6 +183,28 @@ export function LongTermGoals() {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Milestones */}
+                  {goal.milestones && goal.milestones.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Milestones</h4>
+                      <div className="space-y-1">
+                        {goal.milestones.map((milestone, index) => (
+                          <div key={milestone.id} className="flex items-center gap-2 text-sm">
+                            <CheckCircle className={`h-4 w-4 ${milestone.isCompleted ? 'text-green-500' : 'text-muted-foreground'}`} />
+                            <span className={milestone.isCompleted ? 'line-through text-muted-foreground' : ''}>
+                              {milestone.title} ({milestone.percentageTarget}%)
+                            </span>
+                            {milestone.dueDate && (
+                              <span className="text-xs text-muted-foreground">
+                                Due {format(new Date(milestone.dueDate), 'MMM dd')}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Linked Items Summary */}
                   {((goal.linkedTaskIds?.length || 0) + (goal.linkedHabitIds?.length || 0)) > 0 && (
@@ -269,40 +255,6 @@ export function LongTermGoals() {
           })}
         </div>
       )}
-
-      {/* Progress Update Dialog */}
-      <Dialog open={!!editingGoalProgress} onOpenChange={(open) => !open && setEditingGoalProgress(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Update Progress</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="progress">Current Progress</Label>
-              <Input
-                id="progress"
-                type="number"
-                value={newProgressValue}
-                onChange={(e) => setNewProgressValue(e.target.value)}
-                placeholder="Enter current progress..."
-              />
-              {editingGoalProgress && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Based on linked habits completion
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={updateGoalProgress} className="flex-1">
-                Update Progress
-              </Button>
-              <Button variant="outline" onClick={() => setEditingGoalProgress(null)}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {selectedGoal && (
         <GoalDetail 

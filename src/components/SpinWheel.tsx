@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Gift, Sparkles, X, Trophy, Star } from 'lucide-react';
-import { SPIN_REWARDS } from '../data/spinRewards';
+import { SPIN_REWARDS } from '../data/achievements';
 import { SpinReward } from '../types/achievements';
 import { useXPMultiplier } from '../hooks/useXPMultiplier';
 
@@ -45,9 +45,9 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
       setIsSpinning(false);
       setResult(selectedReward);
       
-      // Handle XP multiplier reward
+      // Handle XP multiplier reward - Fixed the bug here
       if (selectedReward.type === 'xp-multiplier') {
-        activateMultiplier(1.5, 1); // 1.5x multiplier for 1 hour
+        activateMultiplier(2.0, 1); // 2x multiplier for 1 hour instead of 1.5x
       }
       
       onReward(selectedReward);
@@ -161,13 +161,8 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
                 </p>
               </div>
               
-              <div className="flex items-center justify-center gap-2 text-sm text-green-600 dark:text-green-400">
-                <Star className="h-4 w-4" />
-                <span>Reward added to your inventory!</span>
-              </div>
-              
-              <Button onClick={handleClose} className="w-full min-h-[48px]">
-                Awesome! Close
+              <Button onClick={handleClose} className="w-full">
+                Collect Reward
               </Button>
             </div>
           )}

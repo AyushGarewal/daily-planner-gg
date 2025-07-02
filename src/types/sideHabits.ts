@@ -8,6 +8,7 @@ export interface SideHabit {
   weekDays?: number[]; // 0-6, Sunday = 0
   subtasks: SideHabitSubtask[];
   createdAt: Date;
+  xpValue?: number; // XP reward for completing the habit
 }
 
 export interface SideHabitSubtask {

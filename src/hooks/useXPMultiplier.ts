@@ -1,69 +1,76 @@
 
+import { useState, useEffect } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 
-interface XPMultiplier {
-  active: boolean;
+interface XPMultiplierState {
+  isActive: boolean;
   multiplier: number;
-  startTime: number;
-  duration: number; // in milliseconds
+  expiresAt: number | null;
 }
 
 export function useXPMultiplier() {
-  const [xpMultiplier, setXPMultiplier] = useLocalStorage<XPMultiplier>('xpMultiplier', {
-    active: false,
+  const [multiplierState, setMultiplierState] = useLocalStorage<XPMultiplierState>('xp-multiplier', {
+    isActive: false,
     multiplier: 1,
-    startTime: 0,
-    duration: 0
+    expiresAt: null
   });
 
-  const activateMultiplier = (multiplier: number, durationInHours: number) => {
-    setXPMultiplier({
-      active: true,
+  const [currentMultiplier, setCurrentMultiplier] = useState(1);
+
+  useEffect(() => {
+    const checkExpiration = () => {
+      if (multiplierState.isActive && multiplierState.expiresAt) {
+        const now = Date.now();
+        if (now >= multiplierState.expiresAt) {
+          // Multiplier has expired
+          setMultiplierState({
+            isActive: false,
+            multiplier: 1,
+            expiresAt: null
+          });
+          setCurrentMultiplier(1);
+        } else {
+          setCurrentMultiplier(multiplierState.multiplier);
+        }
+      } else {
+        setCurrentMultiplier(1);
+      }
+    };
+
+    // Check immediately
+    checkExpiration();
+
+    // Set up interval to check every minute
+    const interval = setInterval(checkExpiration, 60000);
+
+    return () => clearInterval(interval);
+  }, [multiplierState, setMultiplierState]);
+
+  const activateMultiplier = (multiplier: number, durationHours: number = 1) => {
+    const expiresAt = Date.now() + (durationHours * 60 * 60 * 1000);
+    setMultiplierState({
+      isActive: true,
       multiplier,
-      startTime: Date.now(),
-      duration: durationInHours * 60 * 60 * 1000
+      expiresAt
     });
+    setCurrentMultiplier(multiplier);
   };
 
-  const getActiveMultiplier = (): number => {
-    if (!xpMultiplier.active) return 1;
-    
-    const now = Date.now();
-    const elapsed = now - xpMultiplier.startTime;
-    
-    if (elapsed >= xpMultiplier.duration) {
-      // Multiplier has expired
-      setXPMultiplier({
-        active: false,
-        multiplier: 1,
-        startTime: 0,
-        duration: 0
-      });
-      return 1;
-    }
-    
-    return xpMultiplier.multiplier;
+  const applyMultiplier = (baseXP: number): number => {
+    return Math.round(baseXP * currentMultiplier);
   };
 
   const getRemainingTime = (): number => {
-    if (!xpMultiplier.active) return 0;
-    
-    const now = Date.now();
-    const elapsed = now - xpMultiplier.startTime;
-    const remaining = xpMultiplier.duration - elapsed;
-    
-    return Math.max(0, remaining);
-  };
-
-  const isActive = (): boolean => {
-    return xpMultiplier.active && getRemainingTime() > 0;
+    if (!multiplierState.isActive || !multiplierState.expiresAt) return 0;
+    const remaining = Math.max(0, multiplierState.expiresAt - Date.now());
+    return Math.ceil(remaining / (60 * 1000)); // Return minutes remaining
   };
 
   return {
+    isActive: multiplierState.isActive,
+    multiplier: currentMultiplier,
     activateMultiplier,
-    getActiveMultiplier,
-    getRemainingTime,
-    isActive,
-    currentMultiplier: xpMultiplier.multiplier
+    applyMultiplier,
+    getRemainingTime
   };
 }

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Calendar } from 'lucide-react';
+import { Plus, Trash2, Calendar, Star } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
+import { useTasks } from '../hooks/useTasks';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
@@ -19,11 +21,13 @@ export function SideHabitsPanel() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitCategory, setNewHabitCategory] = useState('');
+  const [newHabitXP, setNewHabitXP] = useState(5);
   const [newHabitRecurrence, setNewHabitRecurrence] = useState<'None' | 'Daily' | 'Weekly'>('None');
   const [newHabitWeekDays, setNewHabitWeekDays] = useState<number[]>([]);
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories } = useCustomCategories();
+  const { addBonusXP } = useTasks();
   const today = new Date().toDateString();
 
   const addSideHabit = () => {
@@ -36,6 +40,7 @@ export function SideHabitsPanel() {
         recurrence: newHabitRecurrence,
         weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
         subtasks: newHabitSubtasks,
+        xpValue: newHabitXP,
         createdAt: new Date()
       };
       setSideHabits(prev => [...prev, newHabit]);
@@ -43,6 +48,7 @@ export function SideHabitsPanel() {
       // Reset form
       setNewHabitName('');
       setNewHabitCategory('');
+      setNewHabitXP(5);
       setNewHabitRecurrence('None');
       setNewHabitWeekDays([]);
       setNewHabitSubtasks([]);
@@ -54,12 +60,19 @@ export function SideHabitsPanel() {
     setSideHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
         const isCompleted = habit.completedDates.includes(today);
-        return {
+        const updatedHabit = {
           ...habit,
           completedDates: isCompleted
             ? habit.completedDates.filter(date => date !== today)
             : [...habit.completedDates, today]
         };
+        
+        // Add XP if completing for the first time today
+        if (!isCompleted && habit.xpValue) {
+          addBonusXP(habit.xpValue);
+        }
+        
+        return updatedHabit;
       }
       return habit;
     }));
@@ -139,6 +152,18 @@ export function SideHabitsPanel() {
                 </div>
 
                 <div>
+                  <Label htmlFor="habitXP">XP Reward</Label>
+                  <Input
+                    id="habitXP"
+                    type="number"
+                    value={newHabitXP}
+                    onChange={(e) => setNewHabitXP(parseInt(e.target.value) || 5)}
+                    min="1"
+                    max="50"
+                  />
+                </div>
+
+                <div>
                   <Label htmlFor="recurrence">Recurrence</Label>
                   <Select value={newHabitRecurrence} onValueChange={(value: 'None' | 'Daily' | 'Weekly') => setNewHabitRecurrence(value)}>
                     <SelectTrigger>
@@ -184,14 +209,14 @@ export function SideHabitsPanel() {
           </Dialog>
         </div>
         <p className="text-sm text-muted-foreground">
-          Track habits without affecting streaks or XP
+          Track habits and earn XP without affecting streaks
         </p>
       </CardHeader>
       <CardContent>
         {todaysHabits.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <p className="text-sm">No side habits for today.</p>
-            <p className="text-xs">Add habits to track without affecting your main progress.</p>
+            <p className="text-xs">Add habits to track and earn XP.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -217,6 +242,12 @@ export function SideHabitsPanel() {
                             <>
                               <Calendar className="h-3 w-3" />
                               <span>{habit.recurrence}</span>
+                            </>
+                          )}
+                          {habit.xpValue && (
+                            <>
+                              <Star className="h-3 w-3" />
+                              <span>+{habit.xpValue} XP</span>
                             </>
                           )}
                         </div>

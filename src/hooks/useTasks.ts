@@ -1,350 +1,231 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
-import { Task, UserProgress, getCurrentLevel, getXPRequiredForLevel, DailyUsage } from '../types/task';
-import { useAchievements } from './useAchievements';
+import { v4 as uuidv4 } from 'uuid';
 import { useXPMultiplier } from './useXPMultiplier';
-import { addDays, isBefore, startOfDay, isSameDay, getDay, isAfter } from 'date-fns';
+
+interface Progress {
+  totalXP: number;
+  level: number;
+  tasksCompleted: number;
+  habitsCompleted: number;
+  dailyCompletionRate: number;
+  currentStreak: number;
+  longestStreak: number;
+}
+
+interface DailyUsage {
+  autoComplete: boolean;
+  skipToken: boolean;
+  streakShield: boolean;
+  spinUsed: boolean;
+}
 
 export function useTasks() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', []);
-  const [progress, setProgress] = useLocalStorage<UserProgress>('userProgress', {
+  const [progress, setProgress] = useLocalStorage<Progress>('progress', {
     totalXP: 0,
     level: 1,
+    tasksCompleted: 0,
+    habitsCompleted: 0,
+    dailyCompletionRate: 0,
     currentStreak: 0,
-    maxStreak: 0,
+    longestStreak: 0,
   });
   const [bonusXP, setBonusXP] = useLocalStorage<number>('bonusXP', 0);
-  const [dailyUsage, setDailyUsage] = useLocalStorage<DailyUsage[]>('dailyUsage', []);
-  const [showLevelUp, setShowLevelUp] = useLocalStorage<number | null>('showLevelUp', null);
+  const [dailyUsage, setDailyUsage] = useLocalStorage<DailyUsage>('dailyUsage', {
+    autoComplete: false,
+    skipToken: false,
+    streakShield: false,
+    spinUsed: false,
+  });
+  const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
+  
+  const { applyMultiplier } = useXPMultiplier();
 
-  const { userStats, useStreakShield } = useAchievements();
-  const { getActiveMultiplier } = useXPMultiplier();
-
-  const addTask = (task: Omit<Task, 'id' | 'completed'>) => {
+  const addTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     const newTask: Task = {
-      ...task,
-      id: crypto.randomUUID(),
+      id: uuidv4(),
+      ...taskData,
       completed: false,
     };
     setTasks(prev => [...prev, newTask]);
-    
-    // Auto-generate recurring tasks for habits
-    if (task.type === 'habit' && !task.isRoutine) {
-      generateRecurringTasks(newTask);
-    }
-  };
-
-  const generateRecurringTasks = (baseTask: Task) => {
-    if (baseTask.recurrence === 'None' || baseTask.type !== 'habit') return;
-    
-    const today = startOfDay(new Date());
-    const taskDate = startOfDay(new Date(baseTask.dueDate));
-    
-    // For daily recurring habits, generate future tasks starting from creation date
-    if (baseTask.recurrence === 'Daily') {
-      const futureTasks: Task[] = [];
-      
-      // Generate next 30 days of recurring tasks starting from tomorrow
-      for (let i = 1; i <= 30; i++) {
-        const futureDate = addDays(taskDate, i);
-        futureTasks.push({
-          ...baseTask,
-          id: crypto.randomUUID(),
-          dueDate: futureDate,
-          completed: false,
-          completedAt: undefined,
-          isRoutine: baseTask.isRoutine || false,
-        });
-      }
-      
-      setTasks(prev => [...prev, ...futureTasks]);
-    }
-    
-    // For weekly recurring habits with specific weekdays
-    if (baseTask.recurrence === 'Weekly' && baseTask.weekDays) {
-      const futureTasks: Task[] = [];
-      
-      // Generate next 4 weeks starting from creation date
-      for (let week = 0; week < 4; week++) {
-        baseTask.weekDays.forEach(weekDay => {
-          for (let day = 1; day <= 7; day++) {
-            const futureDate = addDays(taskDate, (week * 7) + day);
-            if (getDay(futureDate) === weekDay && !isSameDay(futureDate, taskDate)) {
-              futureTasks.push({
-                ...baseTask,
-                id: crypto.randomUUID(),
-                dueDate: futureDate,
-                completed: false,
-                completedAt: undefined,
-                isRoutine: baseTask.isRoutine || false,
-              });
-            }
-          }
-        });
-      }
-      
-      setTasks(prev => [...prev, ...futureTasks]);
-    }
   };
 
   const updateTask = (id: string, updates: Partial<Task>) => {
-    setTasks(prev => prev.map(task => 
-      task.id === id ? { ...task, ...updates } : task
-    ));
+    setTasks(prev =>
+      prev.map(task => (task.id === id ? { ...task, ...updates } : task))
+    );
   };
 
   const deleteTask = (id: string) => {
     setTasks(prev => prev.filter(task => task.id !== id));
   };
 
-  const toggleSubtask = (taskId: string, subtaskId: string) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id !== taskId) return task;
-      
-      const updatedSubtasks = task.subtasks.map(subtask =>
-        subtask.id === subtaskId 
-          ? { ...subtask, completed: !subtask.completed }
-          : subtask
-      );
-      
-      // Check if all subtasks are completed
-      const allSubtasksCompleted = updatedSubtasks.length > 0 && 
-        updatedSubtasks.every(st => st.completed);
-      
-      // Auto-complete main task if all subtasks are done
-      if (allSubtasksCompleted && !task.completed) {
-        completeTask(taskId);
-      }
-      
-      return { ...task, subtasks: updatedSubtasks };
-    }));
-  };
-
-  const updateLinkedGoalsProgress = (task: Task) => {
-    if (!task.goalId) return;
-    
-    try {
-      const goals = JSON.parse(localStorage.getItem('goals') || '[]');
-      const updatedGoals = goals.map((goal: any) => {
-        if (goal.id === task.goalId) {
-          // For linked habits, update based on habit completion
-          if (goal.linkedHabitIds && goal.linkedHabitIds.includes(task.id)) {
-            const linkedHabits = JSON.parse(localStorage.getItem('tasks') || '[]')
-              .filter((t: any) => goal.linkedHabitIds.includes(t.id) && t.type === 'habit');
-            
-            let totalProgress = 0;
-            linkedHabits.forEach((habit: any) => {
-              if (habit.numericTarget) {
-                const completedCount = JSON.parse(localStorage.getItem('tasks') || '[]')
-                  .filter((t: any) => t.title === habit.title && t.type === 'habit' && t.completed)
-                  .length;
-                totalProgress += Math.min(completedCount, habit.numericTarget);
-              }
-            });
-            
-            return {
-              ...goal,
-              currentProgress: totalProgress,
-              updatedAt: new Date()
-            };
-          }
-          
-          // For regular numeric targets
-          if (goal.hasNumericTarget) {
-            const newProgress = (goal.currentProgress || 0) + 1;
-            const isCompleted = newProgress >= goal.numericTarget;
-            
-            return {
-              ...goal,
-              currentProgress: Math.min(newProgress, goal.numericTarget),
-              isCompleted,
-              updatedAt: new Date()
-            };
-          }
-        }
-        return goal;
-      });
-      
-      localStorage.setItem('goals', JSON.stringify(updatedGoals));
-      console.log('Updated goal progress for task completion:', task.title);
-    } catch (error) {
-      console.error('Error updating goal progress:', error);
-    }
-  };
-
   const completeTask = (id: string) => {
-    const task = tasks.find(t => t.id === id);
-    if (!task || task.completed) return;
-
-    // Check if all subtasks are completed (if any exist)
-    if (task.subtasks.length > 0) {
-      const allSubtasksCompleted = task.subtasks.every(st => st.completed);
-      if (!allSubtasksCompleted) return; // Don't complete if subtasks remain
-    }
-
-    const completedAt = new Date();
-    updateTask(id, { completed: true, completedAt });
-
-    // Update linked goals progress
-    updateLinkedGoalsProgress(task);
-
-    // Apply XP multiplier if active
-    const multiplier = getActiveMultiplier();
-    const finalXP = Math.round(task.xpValue * multiplier);
-
-    // Update progress with new level system
-    setProgress(prev => {
-      const newTotalXP = prev.totalXP + finalXP;
-      const oldLevel = getCurrentLevel(prev.totalXP);
-      const newLevel = getCurrentLevel(newTotalXP);
-      
-      // Show level up animation if leveled up
-      if (newLevel > oldLevel) {
-        setShowLevelUp(newLevel);
-      }
-      
-      // Update streak for habits only
-      const today = new Date().toDateString();
-      const lastCompletionDate = prev.lastCompletionDate ? new Date(prev.lastCompletionDate).toDateString() : null;
-      
-      let newStreak = prev.currentStreak;
-      if (task.type === 'habit' && (!lastCompletionDate || lastCompletionDate !== today)) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        if (lastCompletionDate === yesterday.toDateString()) {
-          newStreak = prev.currentStreak + 1;
-        } else if (lastCompletionDate === today) {
-          newStreak = prev.currentStreak;
-        } else {
-          // Streak would break - check for streak shield
-          if (useStreakShield()) {
-            newStreak = prev.currentStreak; // Keep streak with shield
-          } else {
-            newStreak = 1;
-          }
+    setTasks(prev => {
+      const updatedTasks = prev.map(task => {
+        if (task.id === id) {
+          const xpReward = task.xpValue || 10;
+          const isHabit = task.type === 'habit';
+          
+          // Update progress stats
+          setProgress(p => ({
+            ...p,
+            totalXP: p.totalXP + xpReward,
+            tasksCompleted: p.tasksCompleted + 1,
+            habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
+          }));
+          
+          return { ...task, completed: true, completedAt: new Date() };
         }
-      }
+        return task;
+      });
+      return updatedTasks;
+    });
+  };
 
-      return {
-        totalXP: newTotalXP,
-        level: newLevel,
-        currentStreak: newStreak,
-        maxStreak: Math.max(prev.maxStreak, newStreak),
-        lastCompletionDate: completedAt,
-      };
+  const toggleSubtask = (taskId: string, subtaskId: string) => {
+    setTasks(prev => {
+      return prev.map(task => {
+        if (task.id === taskId && task.subtasks) {
+          const updatedSubtasks = task.subtasks.map(subtask => {
+            if (subtask.id === subtaskId) {
+              return { ...subtask, completed: !subtask.completed };
+            }
+            return subtask;
+          });
+          return { ...task, subtasks: updatedSubtasks };
+        }
+        return task;
+      });
+    });
+  };
+
+  const canUseDaily = (type: keyof DailyUsage): boolean => {
+    return !dailyUsage[type];
+  };
+
+  const markDailyUsed = (type: keyof DailyUsage) => {
+    setDailyUsage(prev => ({ ...prev, [type]: true }));
+  };
+
+  useEffect(() => {
+    // Reset daily usage at midnight
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const timeUntilMidnight = midnight.getTime() - now.getTime();
+
+    const timeoutId = setTimeout(() => {
+      setDailyUsage({
+        autoComplete: false,
+        skipToken: false,
+        streakShield: false,
+        spinUsed: false,
+      });
+    }, timeUntilMidnight);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  const getTodaysTasks = (): Task[] => {
+    const today = new Date().toDateString();
+    return tasks.filter(task => {
+      if (task.dueDate) {
+        const dueDate = new Date(task.dueDate).toDateString();
+        return dueDate === today;
+      }
+      return false;
+    });
+  };
+
+  const getVisibleTodaysTasks = (): Task[] => {
+    const todaysTasks = getTodaysTasks();
+    const completedTasks = todaysTasks.filter(task => task.completed);
+    
+    if (progress.level >= 3 || completedTasks.length <= 3) {
+      return todaysTasks;
+    } else {
+      return todaysTasks.slice(0, 3);
+    }
+  };
+
+  const shouldShowSurplusTasks = (): boolean => {
+    return progress.level >= 3;
+  };
+
+  const getTodayCompletionPercentage = (): number => {
+    const todaysTasks = getTodaysTasks();
+    const completedTasks = todaysTasks.filter(task => task.completed);
+    const totalTasks = todaysTasks.length;
+    
+    return totalTasks === 0 ? 100 : Math.round((completedTasks.length / totalTasks) * 100);
+  };
+
+  const getTasksForDate = (date: Date): Task[] => {
+    const dateString = date.toDateString();
+    return tasks.filter(task => {
+      if (task.dueDate) {
+        const dueDate = new Date(task.dueDate).toDateString();
+        return dueDate === dateString;
+      }
+      return false;
+    });
+  };
+
+  const filterTasks = (filters: { category?: string; priority?: string; completed?: boolean }): Task[] => {
+    return tasks.filter(task => {
+      if (filters.category && task.category !== filters.category) {
+        return false;
+      }
+      if (filters.priority && task.priority !== filters.priority) {
+        return false;
+      }
+      if (filters.completed !== undefined && task.completed !== filters.completed) {
+        return false;
+      }
+      return true;
+    });
+  };
+
+  const sortTasks = (sortBy: 'dueDate' | 'xpValue' | 'priority'): Task[] => {
+    return [...tasks].sort((a, b) => {
+      switch (sortBy) {
+        case 'dueDate':
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'xpValue':
+          return (b.xpValue || 0) - (a.xpValue || 0);
+        case 'priority':
+          const priorityOrder = { high: 1, medium: 2, low: 3 };
+          return (priorityOrder[a.priority] || 4) - (priorityOrder[b.priority] || 4);
+        default:
+          return 0;
+      }
     });
   };
 
   const addBonusXP = (amount: number) => {
-    // Apply XP multiplier if active
-    const multiplier = getActiveMultiplier();
-    const finalAmount = Math.round(amount * multiplier);
+    // Apply multiplier to bonus XP
+    const multipliedAmount = applyMultiplier(amount);
+    setBonusXP(prev => prev + multipliedAmount);
     
+    // Update progress stats
     setProgress(prev => {
-      const newTotalXP = prev.totalXP + finalAmount;
-      const oldLevel = getCurrentLevel(prev.totalXP);
-      const newLevel = getCurrentLevel(newTotalXP);
+      const newTotalXP = prev.totalXP + multipliedAmount;
+      const newLevel = Math.floor(newTotalXP / 100) + 1;
+      const leveledUp = newLevel > prev.level;
       
-      // Show level up animation if leveled up
-      if (newLevel > oldLevel) {
+      if (leveledUp) {
         setShowLevelUp(newLevel);
       }
       
       return {
         ...prev,
         totalXP: newTotalXP,
-        level: newLevel,
+        level: newLevel
       };
     });
-    setBonusXP(0); // Clear bonus XP after using
-  };
-
-  const canUseDaily = (type: keyof DailyUsage): boolean => {
-    const today = new Date().toDateString();
-    const todayUsage = dailyUsage.find(usage => usage.date === today);
-    return !todayUsage?.[type];
-  };
-
-  const markDailyUsed = (type: keyof DailyUsage) => {
-    const today = new Date().toDateString();
-    setDailyUsage(prev => {
-      const existing = prev.find(usage => usage.date === today);
-      if (existing) {
-        return prev.map(usage => 
-          usage.date === today 
-            ? { ...usage, [type]: true }
-            : usage
-        );
-      } else {
-        return [...prev, {
-          date: today,
-          streakShield: type === 'streakShield',
-          autoComplete: type === 'autoComplete',
-          skipToken: type === 'skipToken',
-          spinUsed: type === 'spinUsed'
-        }];
-      }
-    });
-  };
-
-  const getTodaysTasks = () => {
-    const today = new Date();
-    return tasks.filter(task => {
-      const taskDate = new Date(task.dueDate);
-      
-      // For weekly habits, check if today matches one of the selected weekdays
-      if (task.type === 'habit' && task.recurrence === 'Weekly' && task.weekDays) {
-        const todayWeekday = getDay(today);
-        return task.weekDays.includes(todayWeekday) && 
-               isSameDay(taskDate, today);
-      }
-      
-      return isSameDay(taskDate, today);
-    });
-  };
-
-  const getTodaysNormalTasks = () => {
-    return getTodaysTasks().filter(task => task.taskType === 'normal');
-  };
-
-  const getTodaysSurplusTasks = () => {
-    return getTodaysTasks().filter(task => task.taskType === 'surplus');
-  };
-
-  const getTodayCompletionPercentage = () => {
-    const todaysTasks = getTodaysNormalTasks();
-    if (todaysTasks.length === 0) return 0;
-    const completedCount = todaysTasks.filter(task => task.completed).length;
-    return Math.round((completedCount / todaysTasks.length) * 100);
-  };
-
-  const shouldShowSurplusTasks = () => {
-    return getTodayCompletionPercentage() >= 80;
-  };
-
-  const getVisibleTodaysTasks = () => {
-    const normalTasks = getTodaysNormalTasks();
-    const surplusTasks = getTodaysSurplusTasks();
-    
-    if (shouldShowSurplusTasks()) {
-      return [...normalTasks, ...surplusTasks];
-    }
-    return normalTasks;
-  };
-
-  const getUserHabits = () => {
-    // Get unique habits (remove duplicates from recurring generation)
-    const uniqueHabits = tasks.filter(task => task.type === 'habit')
-      .reduce((acc, task) => {
-        const existingHabit = acc.find(h => h.title === task.title && h.category === task.category);
-        if (!existingHabit) {
-          acc.push(task);
-        }
-        return acc;
-      }, [] as Task[]);
-    
-    return uniqueHabits;
   };
 
   return {
@@ -363,48 +244,11 @@ export function useTasks() {
     markDailyUsed,
     setShowLevelUp,
     getTodaysTasks,
-    getTodaysNormalTasks,
-    getTodaysSurplusTasks,
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,
     getVisibleTodaysTasks,
-    getUserHabits,
-    getTasksForDate: (date: Date) => {
-      return tasks.filter(task => {
-        const taskDate = new Date(task.dueDate);
-        
-        // For weekly habits, check if the date matches one of the selected weekdays
-        if (task.type === 'habit' && task.recurrence === 'Weekly' && task.weekDays) {
-          const dateWeekday = getDay(date);
-          return task.weekDays.includes(dateWeekday) && 
-                 isSameDay(taskDate, date);
-        }
-        
-        return isSameDay(taskDate, date);
-      });
-    },
-    filterTasks: (filters: { category?: string; priority?: string; completed?: boolean }) => {
-      return tasks.filter(task => {
-        if (filters.category && task.category !== filters.category) return false;
-        if (filters.priority && task.priority !== filters.priority) return false;
-        if (filters.completed !== undefined && task.completed !== filters.completed) return false;
-        return true;
-      });
-    },
-    sortTasks: (sortBy: 'dueDate' | 'xpValue' | 'priority') => {
-      return [...tasks].sort((a, b) => {
-        switch (sortBy) {
-          case 'dueDate':
-            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-          case 'xpValue':
-            return b.xpValue - a.xpValue;
-          case 'priority':
-            const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
-            return priorityOrder[b.priority] - priorityOrder[a.priority];
-          default:
-            return 0;
-        }
-      });
-    },
+    getTasksForDate,
+    filterTasks,
+    sortTasks
   };
 }
