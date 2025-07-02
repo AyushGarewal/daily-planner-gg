@@ -1,4 +1,5 @@
 
+
 import { useLocalStorage } from './useLocalStorage';
 import { Achievement, PowerUp, UserStats, DailyUsage } from '../types/achievements';
 import { ACHIEVEMENTS } from '../data/achievements';
@@ -9,12 +10,22 @@ export function useAchievements() {
     achievements: ACHIEVEMENTS.map(a => ({ ...a })),
     powerUps: [],
     streakShields: 0,
+    tasksCompleted: 0,
     totalTasksCompleted: 0,
     earlyBirdCount: 0,
     theme: 'light',
     dailyUsage: [],
     unlockedThemes: ['light'],
     motivationQuotes: [],
+    totalXP: 0,
+    level: 1,
+    currentStreak: 0,
+    maxStreak: 0,
+    habitsCompleted: 0,
+    achievementsUnlocked: 0,
+    streakShieldsUsed: 0,
+    powerUpsUsed: 0,
+    dailyCompletionRate: 0,
   });
 
   const checkAchievements = (progress: UserProgress, tasks: any[]) => {
@@ -58,7 +69,7 @@ export function useAchievements() {
         unlockedAt: userAchievement.unlockedAt
       };
 
-      if (!mergedAchievement.unlocked && mergedAchievement.condition(checkData)) {
+      if (!mergedAchievement.unlocked && mergedAchievement.condition && mergedAchievement.condition(checkData)) {
         return { ...mergedAchievement, unlocked: true, unlockedAt: now };
       }
       return mergedAchievement;
@@ -68,6 +79,7 @@ export function useAchievements() {
       ...prev,
       achievements: newAchievements,
       totalTasksCompleted: completedTasks.length,
+      tasksCompleted: completedTasks.length,
       earlyBirdCount: earlyBirdTasks.length,
     }));
 
@@ -87,7 +99,7 @@ export function useAchievements() {
           ...prev,
           powerUps: prev.powerUps.map(p => 
             p.id === powerUp.id 
-              ? { ...p, uses: Math.min(p.uses + powerUp.uses, p.maxUses) }
+              ? { ...p, uses: Math.min(p.uses + powerUp.uses, p.maxUses || 10) }
               : p
           )
         };
@@ -154,3 +166,4 @@ export function useAchievements() {
     setTheme,
   };
 }
+

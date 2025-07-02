@@ -1,4 +1,5 @@
 
+
 import { Achievement, SpinReward } from '../types/achievements';
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -14,7 +15,8 @@ export const ACHIEVEMENTS: Achievement[] = [
       type: 'task_completion',
       value: 5,
       description: 'Complete 5 tasks before 9 AM'
-    }
+    },
+    condition: (data: any) => data.earlyBirdCount >= 5
   },
   {
     id: 'streak-boss',
@@ -28,7 +30,8 @@ export const ACHIEVEMENTS: Achievement[] = [
       type: 'streak',
       value: 7,
       description: 'Maintain a 7-day streak'
-    }
+    },
+    condition: (data: any) => data.currentStreak >= 7
   },
   {
     id: 'procrastinator-no-more',
@@ -42,7 +45,8 @@ export const ACHIEVEMENTS: Achievement[] = [
       type: 'task_completion',
       value: 1,
       description: 'Finish a task a day early'
-    }
+    },
+    condition: (data: any) => data.hasEarlyCompletion
   },
   {
     id: 'level-master',
@@ -56,7 +60,8 @@ export const ACHIEVEMENTS: Achievement[] = [
       type: 'level',
       value: 5,
       description: 'Reach level 5'
-    }
+    },
+    condition: (data: any) => data.level >= 5
   },
   {
     id: 'task-destroyer',
@@ -70,7 +75,8 @@ export const ACHIEVEMENTS: Achievement[] = [
       type: 'task_completion',
       value: 100,
       description: 'Complete 100 tasks'
-    }
+    },
+    condition: (data: any) => data.totalTasksCompleted >= 100
   },
 ];
 
@@ -132,3 +138,4 @@ export const THEMES = [
   { id: 'forest', name: 'Forest Green', unlockLevel: 5 },
   { id: 'sunset', name: 'Sunset Orange', unlockLevel: 8 },
 ];
+

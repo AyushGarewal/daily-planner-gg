@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -178,8 +177,8 @@ export function NegativeHabitsPanel() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
+                        <SelectItem key={String(category)} value={String(category)}>
+                          {String(category)}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -1,4 +1,5 @@
 
+
 export interface Achievement {
   id: string;
   title: string;
@@ -15,6 +16,7 @@ export interface Achievement {
   };
   xpReward?: number;
   isCustom?: boolean;
+  condition?: (data: any) => boolean; // Add condition function for backwards compatibility
 }
 
 export interface Challenge {
@@ -58,6 +60,7 @@ export interface UserStats {
   currentStreak: number;
   maxStreak: number;
   tasksCompleted: number;
+  totalTasksCompleted: number; // Add this property
   habitsCompleted: number;
   achievementsUnlocked: number;
   streakShieldsUsed: number;
@@ -66,6 +69,8 @@ export interface UserStats {
   achievements: Achievement[];
   streakShields: number;
   powerUps: PowerUp[];
+  theme: string; // Add theme property
+  lastSpinDate?: Date; // Add lastSpinDate property
 }
 
 export interface PowerUp {
@@ -76,6 +81,7 @@ export interface PowerUp {
   description: string;
   quantity: number;
   uses: number;
+  maxUses: number; // Add maxUses property
   usedToday?: boolean;
   icon: string;
 }
@@ -101,3 +107,4 @@ export interface CustomTrophy {
   unlocked: boolean;
   unlockedAt?: Date;
 }
+

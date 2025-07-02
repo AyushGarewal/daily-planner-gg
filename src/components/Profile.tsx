@@ -72,9 +72,9 @@ export function Profile({ progress, userStats }: ProfileProps) {
   const joinDate = new Date(profile.joinDate);
   const daysSinceJoining = Math.floor((Date.now() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Calculate completion rate
-  const completionRate = userStats.totalTasksCompleted > 0 
-    ? Math.round((userStats.totalTasksCompleted / (userStats.totalTasksCompleted + 10)) * 100) // Rough estimate
+  // Calculate completion rate - use tasksCompleted instead of totalTasksCompleted
+  const completionRate = userStats.tasksCompleted > 0 
+    ? Math.round((userStats.tasksCompleted / (userStats.tasksCompleted + 10)) * 100) // Rough estimate
     : 0;
 
   return (
@@ -180,7 +180,7 @@ export function Profile({ progress, userStats }: ProfileProps) {
             <div className="text-center p-4 bg-green-500/5 rounded-lg hover:bg-green-500/10 transition-colors">
               <div className="flex items-center justify-center mb-2">
                 <Award className="h-6 w-6 text-green-600 mr-2" />
-                <span className="text-2xl font-bold text-green-600">{userStats.totalTasksCompleted}</span>
+                <span className="text-2xl font-bold text-green-600">{userStats.tasksCompleted}</span>
               </div>
               <div className="text-sm text-muted-foreground">Tasks Completed</div>
               <div className="text-xs text-green-600 mt-1">{completionRate}% completion rate</div>
@@ -215,7 +215,7 @@ export function Profile({ progress, userStats }: ProfileProps) {
                     <Badge key={powerUp.id} variant="outline" className="flex items-center gap-1">
                       <span>{powerUp.icon}</span>
                       <span>{powerUp.title}</span>
-                      <span className="text-xs">({powerUp.uses}/{powerUp.maxUses})</span>
+                      <span className="text-xs">({powerUp.uses}/{powerUp.maxUses || 10})</span>
                     </Badge>
                   ))}
                 </div>
@@ -277,3 +277,4 @@ export function Profile({ progress, userStats }: ProfileProps) {
     </div>
   );
 }
+
