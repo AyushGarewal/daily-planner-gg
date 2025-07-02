@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -98,9 +97,10 @@ export function LongTermGoals() {
   };
 
   const getLinkedTasksForGoal = (goalId: string) => {
+    const goal = goals.find(g => g.id === goalId);
     return tasks.filter(task => 
       (task.goalId === goalId) || 
-      (goal.linkedTaskIds && goal.linkedTaskIds.includes(task.id))
+      (goal?.linkedTaskIds && goal.linkedTaskIds.includes(task.id))
     );
   };
 
