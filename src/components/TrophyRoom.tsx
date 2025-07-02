@@ -11,7 +11,7 @@ interface TrophyRoomProps {
 }
 
 export function TrophyRoom({ achievements }: TrophyRoomProps) {
-  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const unlockedCount = achievements.filter(a => a.isUnlocked || a.unlocked).length;
 
   return (
     <div className="space-y-6">
@@ -30,7 +30,7 @@ export function TrophyRoom({ achievements }: TrophyRoomProps) {
           <Card 
             key={achievement.id} 
             className={`transition-all duration-200 ${
-              achievement.unlocked 
+              (achievement.isUnlocked || achievement.unlocked)
                 ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200' 
                 : 'opacity-60 bg-gray-50'
             }`}
@@ -39,11 +39,11 @@ export function TrophyRoom({ achievements }: TrophyRoomProps) {
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">
-                    {achievement.unlocked ? achievement.icon : <Lock className="h-8 w-8 text-gray-400" />}
+                    {(achievement.isUnlocked || achievement.unlocked) ? achievement.icon : <Lock className="h-8 w-8 text-gray-400" />}
                   </span>
                   <div>
                     <CardTitle className="text-lg">{achievement.title}</CardTitle>
-                    {achievement.unlocked && achievement.unlockedAt && (
+                    {(achievement.isUnlocked || achievement.unlocked) && achievement.unlockedAt && (
                       <Badge variant="secondary" className="text-xs mt-1">
                         {format(new Date(achievement.unlockedAt), 'MMM dd, yyyy')}
                       </Badge>
