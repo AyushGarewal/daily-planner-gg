@@ -1,5 +1,4 @@
 
-
 export interface Achievement {
   id: string;
   title: string;
@@ -71,6 +70,7 @@ export interface UserStats {
   powerUps: PowerUp[];
   theme: string; // Add theme property
   lastSpinDate?: Date; // Add lastSpinDate property
+  earlyBirdCount: number; // Add earlyBirdCount property
 }
 
 export interface PowerUp {
@@ -107,4 +107,3 @@ export interface CustomTrophy {
   unlocked: boolean;
   unlockedAt?: Date;
 }
-

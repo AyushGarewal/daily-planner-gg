@@ -225,12 +225,14 @@ const Index = () => {
       case 'power-up':
         addPowerUp({
           id: `${reward.value}-${Date.now()}`,
+          type: reward.value as any,
+          name: reward.title,
           title: reward.title,
           description: reward.description || 'Earned from daily spin',
+          quantity: 1,
           icon: '⚡',
           uses: 1,
-          maxUses: 1,
-          type: reward.value as any
+          maxUses: 1
         });
         break;
       case 'streak-shield':

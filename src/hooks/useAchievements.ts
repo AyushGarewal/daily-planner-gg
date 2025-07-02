@@ -1,5 +1,3 @@
-
-
 import { useLocalStorage } from './useLocalStorage';
 import { Achievement, PowerUp, UserStats, DailyUsage } from '../types/achievements';
 import { ACHIEVEMENTS } from '../data/achievements';
@@ -166,4 +164,3 @@ export function useAchievements() {
     setTheme,
   };
 }
-
