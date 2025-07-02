@@ -1,4 +1,5 @@
 
+
 export interface Achievement {
   id: string;
   title: string;
@@ -69,6 +70,8 @@ export interface UserStats {
   streakShields: number;
   powerUps: PowerUp[];
   theme: string; // Add theme property
+  unlockedThemes: string[]; // Add unlockedThemes property
+  motivationQuotes?: string[]; // Add motivationQuotes property
   lastSpinDate?: Date; // Add lastSpinDate property
   earlyBirdCount: number; // Add earlyBirdCount property
 }
@@ -107,3 +110,4 @@ export interface CustomTrophy {
   unlocked: boolean;
   unlockedAt?: Date;
 }
+
