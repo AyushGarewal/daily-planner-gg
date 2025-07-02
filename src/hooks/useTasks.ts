@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -12,6 +13,7 @@ interface Progress {
   dailyCompletionRate: number;
   currentStreak: number;
   longestStreak: number;
+  maxStreak: number; // Added missing property
 }
 
 interface DailyUsage {
@@ -31,6 +33,7 @@ export function useTasks() {
     dailyCompletionRate: 0,
     currentStreak: 0,
     longestStreak: 0,
+    maxStreak: 0, // Added missing property
   });
   const [bonusXP, setBonusXP] = useLocalStorage<number>('bonusXP', 0);
   const [dailyUsage, setDailyUsage] = useLocalStorage<DailyUsage>('dailyUsage', {
@@ -108,6 +111,11 @@ export function useTasks() {
 
   const markDailyUsed = (type: keyof DailyUsage) => {
     setDailyUsage(prev => ({ ...prev, [type]: true }));
+  };
+
+  // Add getUserHabits method
+  const getUserHabits = (): Task[] => {
+    return tasks.filter(task => task.type === 'habit');
   };
 
   useEffect(() => {
@@ -249,6 +257,7 @@ export function useTasks() {
     getVisibleTodaysTasks,
     getTasksForDate,
     filterTasks,
-    sortTasks
+    sortTasks,
+    getUserHabits // Add the missing method
   };
 }

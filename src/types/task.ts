@@ -20,6 +20,7 @@ export interface Task {
   projectId?: string; // Link to project
   goalId?: string; // Link to long-term goal
   customCategory?: string; // Custom category name
+  numericTarget?: number; // For habits - target number of completions
 }
 
 export interface Subtask {
@@ -54,6 +55,9 @@ export const CATEGORIES = [
   'Household',
   'Other'
 ];
+
+// Export TaskType for backwards compatibility
+export type TaskType = 'task' | 'habit';
 
 // New flexible level progression system - easier early levels
 export const LEVEL_XP_REQUIREMENTS = [
