@@ -4,10 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, ChevronLeft, ChevronRight, Heart, BookOpen, Zap, Droplets, Flame } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Heart, BookOpen, Zap } from 'lucide-react';
 import { useMoodTracker } from '../hooks/useMoodTracker';
 import { useDailyReflections } from '../hooks/useDailyReflections';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { 
   format, 
   startOfMonth, 
@@ -21,19 +20,9 @@ import {
   isToday
 } from 'date-fns';
 
-interface WellnessEntry {
-  id: string;
-  date: string;
-  waterIntake: number;
-  calorieIntake: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export function WellnessCalendar() {
   const { moodEntries } = useMoodTracker();
   const { reflections } = useDailyReflections();
-  const [wellnessEntries] = useLocalStorage<WellnessEntry[]>('wellnessEntries', []);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -53,14 +42,13 @@ export function WellnessCalendar() {
   }
 
   const getDayData = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
+    const dateStr = date.toDateString();
     const dayMoodEntries = moodEntries.filter(entry => 
-      new Date(entry.date).toDateString() === date.toDateString()
+      new Date(entry.date).toDateString() === dateStr
     );
     const dayReflection = reflections.find(entry => 
-      new Date(entry.reflection_date).toDateString() === date.toDateString()
+      new Date(entry.reflection_date).toDateString() === dateStr
     );
-    const dayWellness = wellnessEntries.find(entry => entry.date === dateStr);
 
     const avgMood = dayMoodEntries.length > 0 
       ? dayMoodEntries.reduce((sum, entry) => sum + entry.mood, 0) / dayMoodEntries.length 
@@ -73,10 +61,9 @@ export function WellnessCalendar() {
     return {
       moodEntries: dayMoodEntries,
       reflection: dayReflection,
-      wellness: dayWellness,
       avgMood: Math.round(avgMood * 10) / 10,
       avgEnergy: Math.round(avgEnergy * 10) / 10,
-      hasData: dayMoodEntries.length > 0 || !!dayReflection || !!dayWellness
+      hasData: dayMoodEntries.length > 0 || !!dayReflection
     };
   };
 
@@ -92,16 +79,6 @@ export function WellnessCalendar() {
     if (energy <= 2) return 'bg-orange-400';
     if (energy === 3) return 'bg-blue-400';
     return 'bg-purple-400';
-  };
-
-  const getWaterProgress = (waterIntake: number) => {
-    const goal = 2000; // ml
-    return Math.min((waterIntake / goal) * 100, 100);
-  };
-
-  const getCalorieProgress = (calorieIntake: number) => {
-    const goal = 2200; // calories
-    return Math.min((calorieIntake / goal) * 100, 100);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -145,7 +122,7 @@ export function WellnessCalendar() {
         
         <CardContent className="space-y-4">
           {/* Legend */}
-          <div className="flex flex-wrap items-center gap-4 text-xs">
+          <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1">
               <div className="w-4 h-4 bg-green-400 rounded"></div>
               <span>Good Mood</span>
@@ -161,14 +138,6 @@ export function WellnessCalendar() {
             <div className="flex items-center gap-1">
               <div className="w-4 h-4 bg-purple-400 rounded"></div>
               <span>High Energy</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Droplets className="h-4 w-4 text-blue-500" />
-              <span>Water Goal</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Flame className="h-4 w-4 text-orange-500" />
-              <span>Calorie Goal</span>
             </div>
             <div className="flex items-center gap-1">
               <BookOpen className="h-4 w-4 text-blue-500" />
@@ -199,7 +168,7 @@ export function WellnessCalendar() {
                     key={index}
                     onClick={() => setSelectedDate(date)}
                     className={`
-                      relative h-20 w-full rounded-lg text-xs font-medium transition-all duration-200
+                      relative h-16 w-full rounded-lg text-xs font-medium transition-all duration-200
                       hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500
                       ${todayClass} border border-gray-200
                       ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 opacity-50'}
@@ -211,40 +180,13 @@ export function WellnessCalendar() {
                       {dayData.hasData && (
                         <div className="flex-1 flex flex-col gap-1 mt-1">
                           {dayData.avgMood > 0 && (
-                            <div className={`h-1 w-full rounded ${getMoodColor(dayData.avgMood)}`} 
+                            <div className={`h-2 w-full rounded ${getMoodColor(dayData.avgMood)}`} 
                                  title={`Mood: ${dayData.avgMood}`}></div>
                           )}
                           {dayData.avgEnergy > 0 && (
-                            <div className={`h-1 w-full rounded ${getEnergyColor(dayData.avgEnergy)}`}
+                            <div className={`h-2 w-full rounded ${getEnergyColor(dayData.avgEnergy)}`}
                                  title={`Energy: ${dayData.avgEnergy}`}></div>
                           )}
-                          
-                          {/* Water and Calorie indicators */}
-                          <div className="flex gap-1">
-                            {dayData.wellness?.waterIntake && (
-                              <div className="flex-1">
-                                <div className="h-1 bg-blue-200 rounded overflow-hidden">
-                                  <div 
-                                    className="h-full bg-blue-500" 
-                                    style={{ width: `${getWaterProgress(dayData.wellness.waterIntake)}%` }}
-                                    title={`Water: ${dayData.wellness.waterIntake}ml`}
-                                  ></div>
-                                </div>
-                              </div>
-                            )}
-                            {dayData.wellness?.calorieIntake && (
-                              <div className="flex-1">
-                                <div className="h-1 bg-orange-200 rounded overflow-hidden">
-                                  <div 
-                                    className="h-full bg-orange-500" 
-                                    style={{ width: `${getCalorieProgress(dayData.wellness.calorieIntake)}%` }}
-                                    title={`Calories: ${dayData.wellness.calorieIntake}`}
-                                  ></div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          
                           {dayData.reflection && (
                             <div className="flex justify-center">
                               <BookOpen className="h-3 w-3 text-blue-500" />
@@ -302,28 +244,6 @@ export function WellnessCalendar() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Wellness Data */}
-                {selectedDateData.wellness && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-yellow-500" />
-                      Wellness Tracking
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="text-center p-2 bg-muted rounded">
-                        <Droplets className="h-4 w-4 mx-auto mb-1 text-blue-500" />
-                        <div className="text-lg font-bold">{selectedDateData.wellness.waterIntake}ml</div>
-                        <div className="text-xs text-muted-foreground">Water</div>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded">
-                        <Flame className="h-4 w-4 mx-auto mb-1 text-orange-500" />
-                        <div className="text-lg font-bold">{selectedDateData.wellness.calorieIntake}</div>
-                        <div className="text-xs text-muted-foreground">Calories</div>
-                      </div>
                     </div>
                   </div>
                 )}
