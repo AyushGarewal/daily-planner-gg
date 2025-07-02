@@ -5,19 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, Calendar, TrendingUp, Trophy, Link } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Target, Calendar, TrendingUp, Trophy, Link, CheckCircle2, Circle } from 'lucide-react';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
 import { GoalForm } from './GoalForm';
 import { GoalDetail } from './GoalDetail';
+import { TaskForm } from './TaskForm';
 import { Goal } from '../types/goals';
+import { Task } from '../types/task';
 import { format } from 'date-fns';
 
 export function LongTermGoals() {
   const { goals, getGoalProgress } = useGoals();
-  const { tasks } = useTasks();
+  const { tasks, addTask, completeTask } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [selectedGoalForTask, setSelectedGoalForTask] = useState<string | null>(null);
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -75,6 +80,30 @@ export function LongTermGoals() {
     setSelectedGoal(goal);
   };
 
+  const handleAddTaskToGoal = (goalId: string) => {
+    setSelectedGoalForTask(goalId);
+    setIsTaskFormOpen(true);
+  };
+
+  const handleTaskSubmit = (taskData: Omit<Task, 'id' | 'completed'>) => {
+    if (selectedGoalForTask) {
+      const taskWithGoal = {
+        ...taskData,
+        goalId: selectedGoalForTask
+      };
+      addTask(taskWithGoal);
+    }
+    setIsTaskFormOpen(false);
+    setSelectedGoalForTask(null);
+  };
+
+  const getLinkedTasksForGoal = (goalId: string) => {
+    return tasks.filter(task => 
+      (task.goalId === goalId) || 
+      (goal.linkedTaskIds && goal.linkedTaskIds.includes(task.id))
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -118,12 +147,12 @@ export function LongTermGoals() {
           {goals.map((goal) => {
             const progress = getGoalProgress(goal.id);
             const numericProgress = calculateNumericProgress(goal);
+            const linkedTasks = getLinkedTasksForGoal(goal.id);
             
             return (
               <Card 
                 key={goal.id} 
                 className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-                onClick={() => handleGoalClick(goal)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -153,11 +182,13 @@ export function LongTermGoals() {
                       )}
                     </div>
                   </div>
-                  <CardTitle className="text-lg leading-tight">{goal.title}</CardTitle>
+                  <CardTitle className="text-lg leading-tight" onClick={() => handleGoalClick(goal)}>
+                    {goal.title}
+                  </CardTitle>
                 </CardHeader>
                 
                 <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-sm text-muted-foreground line-clamp-2" onClick={() => handleGoalClick(goal)}>
                     {goal.description}
                   </p>
                   
@@ -188,32 +219,64 @@ export function LongTermGoals() {
                       {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
                     </div>
                   </div>
-                  
-                  {/* Linked Items Summary */}
-                  {((goal.linkedTaskIds?.length || 0) + (goal.linkedHabitIds?.length || 0)) > 0 && (
-                    <div className="text-xs text-muted-foreground border-t pt-2">
-                      <div className="flex items-center gap-4">
-                        {(goal.linkedTaskIds?.length || 0) > 0 && (
-                          <span>{goal.linkedTaskIds?.length} linked tasks</span>
-                        )}
-                        {(goal.linkedHabitIds?.length || 0) > 0 && (
-                          <span>{goal.linkedHabitIds?.length} linked habits</span>
+
+                  {/* Linked Tasks Section */}
+                  {linkedTasks.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium">Linked Tasks</span>
+                        <span>{linkedTasks.filter(t => t.completed).length}/{linkedTasks.length}</span>
+                      </div>
+                      <div className="space-y-1 max-h-20 overflow-y-auto">
+                        {linkedTasks.slice(0, 3).map(task => (
+                          <div key={task.id} className="flex items-center gap-2 text-xs">
+                            {task.completed ? (
+                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Circle className="h-3 w-3 text-gray-400" />
+                            )}
+                            <span className={task.completed ? 'line-through text-muted-foreground' : ''}>
+                              {task.title}
+                            </span>
+                          </div>
+                        ))}
+                        {linkedTasks.length > 3 && (
+                          <div className="text-xs text-muted-foreground">
+                            +{linkedTasks.length - 3} more tasks
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
+
+                  {/* Add Task Button */}
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="w-full gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddTaskToGoal(goal.id);
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add Task
+                  </Button>
                   
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Started {format(new Date(goal.startDate), 'MMM dd')}
-                    </div>
-                    {goal.targetDate && (
+                  {/* Linked Items Summary */}
+                  <div className="text-xs text-muted-foreground border-t pt-2">
+                    <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        Due {format(new Date(goal.targetDate), 'MMM dd')}
+                        <Calendar className="h-3 w-3" />
+                        Started {format(new Date(goal.startDate), 'MMM dd')}
                       </div>
-                    )}
+                      {goal.targetDate && (
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-3 w-3" />
+                          Due {format(new Date(goal.targetDate), 'MMM dd')}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -221,6 +284,22 @@ export function LongTermGoals() {
           })}
         </div>
       )}
+
+      {/* Task Form Dialog */}
+      <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto mx-4">
+          <DialogHeader>
+            <DialogTitle>Add Task to Goal</DialogTitle>
+          </DialogHeader>
+          <TaskForm
+            onSubmit={handleTaskSubmit}
+            onCancel={() => {
+              setIsTaskFormOpen(false);
+              setSelectedGoalForTask(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
 
       {selectedGoal && (
         <GoalDetail 

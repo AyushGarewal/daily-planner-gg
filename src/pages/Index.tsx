@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -47,13 +48,19 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Calendar as CalendarIcon, Moon, Sun, Heart } from "lucide-react";
+import { Calendar as CalendarIcon, Moon, Sun, Heart, Circle, Shield, Droplets } from "lucide-react";
 import { HabitPerformanceCalendar } from "@/components/HabitPerformanceCalendar";
 import { WellnessCalendar } from "../components/WellnessCalendar";
 import { SleepCalendar } from "../components/SleepCalendar";
+import { SideHabits } from "../components/SideHabits";
+import { NegativeHabits } from "../components/NegativeHabits";
+import { WellnessLogging } from "../components/WellnessLogging";
+import { LongTermGoals } from "../components/LongTermGoals";
+import { MonthlyTasksView } from "../components/MonthlyTasksView";
 
 const Index = () => {
   const [mounted, setMounted] = useState(false);
+  const [activeView, setActiveView] = useState('dashboard');
 
   useEffect(() => {
     setMounted(true);
@@ -61,10 +68,29 @@ const Index = () => {
 
   const menuItems = [
     {
+      id: "dashboard",
+      title: "Dashboard",
+      icon: Sun,
+      component: () => (
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome!</CardTitle>
+            <CardDescription>
+              Your productivity hub dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Select an option from the left sidebar to get started.</p>
+          </CardContent>
+        </Card>
+      ),
+      description: "Main dashboard overview",
+    },
+    {
       id: "tasks",
       title: "Tasks",
       icon: Sun,
-      component: () => <></>,
+      component: MonthlyTasksView,
       description: "Manage your daily, weekly and monthly tasks",
     },
     {
@@ -75,20 +101,39 @@ const Index = () => {
       description: "Track your habits and build consistency",
     },
     {
+      id: "side-habits",
+      title: "Side Habits",
+      icon: Circle,
+      component: SideHabits,
+      description: "Track habits without affecting XP or streaks",
+    },
+    {
+      id: "negative-habits",
+      title: "Negative Habits",
+      icon: Shield,
+      component: NegativeHabits,
+      description: "Resist bad habits and gain XP",
+    },
+    {
       id: "goals",
       title: "Goals",
       icon: CalendarIcon,
-      component: () => <></>,
+      component: LongTermGoals,
       description: "Set and track your long term goals",
     },
-
-    // Add calendar views to existing menu
+    {
+      id: "wellness-logging",
+      title: "Wellness Logging",
+      icon: Droplets,
+      component: WellnessLogging,
+      description: "Track water and calorie intake",
+    },
     { 
       id: 'wellness-calendar', 
       title: 'Wellness Calendar', 
       icon: Heart, 
       component: WellnessCalendar,
-      description: 'View mood, energy, and reflections over time'
+      description: 'View mood, energy, and wellness data over time'
     },
     { 
       id: 'sleep-calendar', 
@@ -106,12 +151,14 @@ const Index = () => {
     },
   ];
 
+  const ActiveComponent = menuItems.find(item => item.id === activeView)?.component || (() => <div>Component not found</div>);
+
   return (
     <div className="flex min-h-screen bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div className="flex items-center justify-between h-16 px-4">
-          <span className="text-lg font-semibold">MyProduct</span>
+          <span className="text-lg font-semibold">ProductivityHub</span>
           <ModeToggle />
         </div>
         <Separator />
@@ -119,13 +166,17 @@ const Index = () => {
           <ul>
             {menuItems.map((item) => (
               <li key={item.id} className="px-4 py-2">
-                <a
-                  href="#"
-                  className="flex items-center space-x-2 rounded-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                <button
+                  onClick={() => setActiveView(item.id)}
+                  className={`flex items-center space-x-2 rounded-md p-2 w-full text-left transition-colors ${
+                    activeView === item.id 
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
                 >
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
-                </a>
+                </button>
               </li>
             ))}
           </ul>
@@ -133,36 +184,18 @@ const Index = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
-        <header className="mb-4">
-          <h1 className="text-3xl font-extrabold">Dashboard</h1>
+      <main className="flex-1 p-8 overflow-auto">
+        <header className="mb-6">
+          <h1 className="text-3xl font-extrabold">
+            {menuItems.find(item => item.id === activeView)?.title || 'Dashboard'}
+          </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Welcome to your productivity hub!
+            {menuItems.find(item => item.id === activeView)?.description || 'Welcome to your productivity hub!'}
           </p>
         </header>
 
-        <section className="grid grid-cols-1 gap-6">
-          {/* Main area for components */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Welcome!</CardTitle>
-              <CardDescription>
-                Select an option from the left sidebar.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>
-                This is a{" "}
-                <a
-                  href="https://github.com/steven-tey/precedent"
-                  target="_blank"
-                >
-                  Precedent
-                </a>{" "}
-                starter template.
-              </p>
-            </CardContent>
-          </Card>
+        <section>
+          <ActiveComponent />
         </section>
       </main>
     </div>
