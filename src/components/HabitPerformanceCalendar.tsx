@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ export function HabitPerformanceCalendar() {
   const [selectedHabit, setSelectedHabit] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // Get unique habits
+  // Get unique habits from actual task data
   const habits = tasks.filter(task => task.type === 'habit')
     .reduce((acc, task) => {
       const existingHabit = acc.find(h => h.title === task.title && h.category === task.category);
@@ -238,11 +237,18 @@ export function HabitPerformanceCalendar() {
         </CardHeader>
 
         <CardContent>
-          {!selectedHabit ? (
+          {!selectedHabit || habits.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Select a habit to view calendar</h3>
-              <p className="text-sm">Choose a habit from the dropdown to see its performance history</p>
+              <h3 className="text-lg font-medium mb-2">
+                {habits.length === 0 ? 'No habits found' : 'Select a habit to view calendar'}
+              </h3>
+              <p className="text-sm">
+                {habits.length === 0 
+                  ? 'Create some habits to track their performance over time'
+                  : 'Choose a habit from the dropdown to see its performance history'
+                }
+              </p>
             </div>
           ) : (
             <div className="space-y-4">

@@ -24,6 +24,10 @@ import { AvatarScreen } from '../components/AvatarScreen';
 import { SpinWheelCenter } from '../components/SpinWheelCenter';
 import { SpinWheelStatus } from '../components/SpinWheelStatus';
 import { ThemeSelector } from '../components/ThemeSelector';
+import { SideHabitsPanel } from '../components/SideHabitsPanel';
+import { NegativeHabitsPanel } from '../components/NegativeHabitsPanel';
+import { WellnessLogging } from '../components/WellnessLogging';
+import { WellnessCalendar } from '../components/WellnessCalendar';
 import { Task } from '../types/task';
 import { Achievement, SpinReward } from '../types/achievements';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
@@ -212,9 +216,7 @@ const Index = () => {
     
     switch (reward.type) {
       case 'xp':
-        const currentBonusXP = localStorage.getItem('bonusXP');
-        const newBonusXP = (currentBonusXP ? parseInt(currentBonusXP) : 0) + (reward.value as number);
-        localStorage.setItem('bonusXP', newBonusXP.toString());
+        addBonusXP(reward.value as number);
         break;
       case 'power-up':
         addPowerUp({
@@ -440,6 +442,18 @@ const Index = () => {
                     ))}
                   </div>
                 )}
+                
+                {/* Add Wellness Logging to today view */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Wellness Logging</h3>
+                  <WellnessLogging />
+                </div>
+                
+                {/* Add Side Habits and Negative Habits */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                  <SideHabitsPanel />
+                  <NegativeHabitsPanel />
+                </div>
               </div>
             )}
 
@@ -626,12 +640,20 @@ const Index = () => {
               <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <h2 className="text-lg sm:text-xl font-semibold">Wellness & Insights</h2>
                 
+                {/* Add Wellness Logging */}
+                <WellnessLogging />
+                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <MoodTracker />
                   <JournalPrompt />
                 </div>
                 
                 <ProductivityChart />
+                
+                {/* Add Wellness Calendar */}
+                <div className="mt-6">
+                  <WellnessCalendar />
+                </div>
               </div>
             )}
 

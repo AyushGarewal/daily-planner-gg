@@ -5,19 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, Calendar, TrendingUp, Trophy, Link } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Target, Calendar, TrendingUp, Trophy, Link, Edit } from 'lucide-react';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
 import { GoalForm } from './GoalForm';
 import { GoalDetail } from './GoalDetail';
 import { Goal } from '../types/goals';
+import { ProjectTaskIntegration } from './ProjectTaskIntegration';
 import { format } from 'date-fns';
 
 export function LongTermGoals() {
-  const { goals, getGoalProgress } = useGoals();
+  const { goals, getGoalProgress, updateGoal } = useGoals();
   const { tasks } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [editingGoalProgress, setEditingGoalProgress] = useState<Goal | null>(null);
+  const [newProgressValue, setNewProgressValue] = useState('');
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -32,10 +38,9 @@ export function LongTermGoals() {
   const calculateNumericProgress = (goal: Goal) => {
     if (!goal.hasNumericTarget || !goal.numericTarget) return null;
     
-    // Use current progress from goal if available, otherwise calculate from linked items
     let currentProgress = goal.currentProgress || 0;
     
-    // If no current progress set, calculate from linked tasks/habits completion
+    // Calculate from linked tasks/habits completion if no manual progress set
     if (currentProgress === 0) {
       let completedCount = 0;
       
@@ -47,10 +52,10 @@ export function LongTermGoals() {
         completedCount += linkedTasks.length;
       }
       
-      // Count completed linked habits (for habits, might count daily completions)
+      // Count completed linked habits
       if (goal.linkedHabitIds && goal.linkedHabitIds.length > 0) {
         const linkedHabits = tasks.filter(task => 
-          goal.linkedHabitIds!.includes(task.id) && task.completed
+          goal.linkedHabitIds!.includes(task.id) && task.completed && task.type === 'habit'
         );
         completedCount += linkedHabits.length;
       }
@@ -73,6 +78,25 @@ export function LongTermGoals() {
 
   const handleGoalClick = (goal: Goal) => {
     setSelectedGoal(goal);
+  };
+
+  const handleProgressUpdate = (goal: Goal) => {
+    setEditingGoalProgress(goal);
+    setNewProgressValue(goal.currentProgress?.toString() || '0');
+  };
+
+  const updateGoalProgress = () => {
+    if (editingGoalProgress && newProgressValue) {
+      const newProgress = parseInt(newProgressValue);
+      if (!isNaN(newProgress) && newProgress >= 0) {
+        updateGoal(editingGoalProgress.id, {
+          currentProgress: Math.min(newProgress, editingGoalProgress.numericTarget || 0),
+          isCompleted: newProgress >= (editingGoalProgress.numericTarget || 0)
+        });
+      }
+      setEditingGoalProgress(null);
+      setNewProgressValue('');
+    }
   };
 
   return (
@@ -114,18 +138,14 @@ export function LongTermGoals() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-6">
           {goals.map((goal) => {
             const progress = getGoalProgress(goal.id);
             const numericProgress = calculateNumericProgress(goal);
             
             return (
-              <Card 
-                key={goal.id} 
-                className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
-                onClick={() => handleGoalClick(goal)}
-              >
-                <CardHeader className="pb-3">
+              <Card key={goal.id} className="w-full">
+                <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${getCategoryColor(goal.category)}`} />
@@ -154,38 +174,50 @@ export function LongTermGoals() {
                     </div>
                   </div>
                   <CardTitle className="text-lg leading-tight">{goal.title}</CardTitle>
-                </CardHeader>
-                
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-sm text-muted-foreground">
                     {goal.description}
                   </p>
-                  
-                  {/* Numeric Progress */}
-                  {numericProgress && (
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  {/* Dual Progress Tracking */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Numeric Progress */}
+                    {numericProgress && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Numeric Target Progress</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleProgressUpdate(goal)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {numericProgress.current} / {numericProgress.target} {goal.targetUnit}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {numericProgress.percentage}%
+                          </span>
+                        </div>
+                        <Progress value={numericProgress.percentage} className="h-3" />
+                      </div>
+                    )}
+                    
+                    {/* Milestone Progress */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Numeric Target</span>
-                        <span className="text-muted-foreground">
-                          {numericProgress.current} / {numericProgress.target} {goal.targetUnit}
-                        </span>
+                        <span className="font-medium">Milestone Progress</span>
+                        <span className="text-muted-foreground">{progress.percentage}%</span>
                       </div>
-                      <Progress value={numericProgress.percentage} className="h-3" />
-                      <div className="text-xs text-center text-muted-foreground">
-                        {numericProgress.percentage}% complete
+                      <Progress value={progress.percentage} className="h-3" />
+                      <div className="text-xs text-muted-foreground">
+                        {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* Milestone Progress */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span>Milestone Progress</span>
-                      <span>{progress.percentage}%</span>
-                    </div>
-                    <Progress value={progress.percentage} className="h-2" />
-                    <div className="text-xs text-muted-foreground">
-                      {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
                     </div>
                   </div>
                   
@@ -203,6 +235,23 @@ export function LongTermGoals() {
                     </div>
                   )}
                   
+                  {/* Task Integration */}
+                  <div className="border-t pt-4">
+                    <ProjectTaskIntegration
+                      projectId={goal.id}
+                      projectName={goal.title}
+                      projectColor={getCategoryColor(goal.category).replace('bg-', '')}
+                      onProgressUpdate={(completed, total) => {
+                        // Update goal progress when tasks are completed
+                        if (goal.hasNumericTarget) {
+                          updateGoal(goal.id, {
+                            currentProgress: Math.min(completed, goal.numericTarget || 0)
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                  
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -215,12 +264,54 @@ export function LongTermGoals() {
                       </div>
                     )}
                   </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleGoalClick(goal)}
+                    className="w-full"
+                  >
+                    View Details
+                  </Button>
                 </CardContent>
               </Card>
             );
           })}
         </div>
       )}
+
+      {/* Progress Update Dialog */}
+      <Dialog open={!!editingGoalProgress} onOpenChange={(open) => !open && setEditingGoalProgress(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Progress</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="progress">Current Progress</Label>
+              <Input
+                id="progress"
+                type="number"
+                value={newProgressValue}
+                onChange={(e) => setNewProgressValue(e.target.value)}
+                placeholder="Enter current progress..."
+              />
+              {editingGoalProgress && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Target: {editingGoalProgress.numericTarget} {editingGoalProgress.targetUnit}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={updateGoalProgress} className="flex-1">
+                Update Progress
+              </Button>
+              <Button variant="outline" onClick={() => setEditingGoalProgress(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {selectedGoal && (
         <GoalDetail 

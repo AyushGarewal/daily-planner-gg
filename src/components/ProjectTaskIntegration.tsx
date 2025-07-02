@@ -18,6 +18,7 @@ interface ProjectTaskIntegrationProps {
   onTaskComplete?: (taskId: string) => void;
   onTaskEdit?: (task: Task) => void;
   onTaskDelete?: (taskId: string) => void;
+  onProgressUpdate?: (completed: number, total: number) => void;
 }
 
 export function ProjectTaskIntegration({ 
@@ -26,7 +27,8 @@ export function ProjectTaskIntegration({
   projectColor, 
   onTaskComplete,
   onTaskEdit,
-  onTaskDelete 
+  onTaskDelete,
+  onProgressUpdate
 }: ProjectTaskIntegrationProps) {
   const { tasks, addTask, completeTask, updateTask, deleteTask, toggleSubtask } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -38,6 +40,13 @@ export function ProjectTaskIntegration({
   const progressPercentage = projectTasks.length > 0 
     ? Math.round((completedTasks.length / projectTasks.length) * 100)
     : 0;
+
+  // Notify parent component of progress updates
+  React.useEffect(() => {
+    if (onProgressUpdate) {
+      onProgressUpdate(completedTasks.length, projectTasks.length);
+    }
+  }, [completedTasks.length, projectTasks.length, onProgressUpdate]);
 
   const handleAddTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     const taskWithProject = {
@@ -110,20 +119,6 @@ export function ProjectTaskIntegration({
             </DialogContent>
           </Dialog>
         </div>
-
-        {/* Progress Section */}
-        {projectTasks.length > 0 && (
-          <div className="space-y-2 pt-4">
-            <div className="flex items-center justify-between text-sm">
-              <span>Project Progress</span>
-              <span className="font-medium">{progressPercentage}%</span>
-            </div>
-            <Progress value={progressPercentage} className="h-2" />
-            <div className="text-xs text-muted-foreground">
-              {completedTasks.length} of {projectTasks.length} tasks completed
-            </div>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent>
