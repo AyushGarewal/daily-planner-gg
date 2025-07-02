@@ -1,3 +1,4 @@
+
 import { useLocalStorage } from './useLocalStorage';
 import { Achievement, PowerUp, UserStats, DailyUsage } from '../types/achievements';
 import { ACHIEVEMENTS } from '../data/achievements';
@@ -12,7 +13,6 @@ export function useAchievements() {
     totalTasksCompleted: 0,
     earlyBirdCount: 0,
     theme: 'light',
-    dailyUsage: [],
     unlockedThemes: ['light'],
     motivationQuotes: [],
     totalXP: 0,

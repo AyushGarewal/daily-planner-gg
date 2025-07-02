@@ -90,7 +90,7 @@ export interface DailyUsage {
   autoComplete: boolean;
   skipToken: boolean;
   streakShield: boolean;
-  xpMultiplier: boolean;
+  spinUsed: boolean;  // Changed from xpMultiplier to spinUsed to match usage
 }
 
 export interface CustomTrophy {
