@@ -89,17 +89,6 @@ export function useAchievements() {
     return newlyUnlocked;
   };
 
-  const unlockAchievement = (achievementId: string) => {
-    setUserStats(prev => ({
-      ...prev,
-      achievements: prev.achievements.map(achievement => 
-        achievement.id === achievementId 
-          ? { ...achievement, unlocked: true, unlockedAt: new Date() }
-          : achievement
-      )
-    }));
-  };
-
   const addPowerUp = (powerUp: PowerUp) => {
     setUserStats(prev => {
       const existingPowerUp = prev.powerUps.find(p => p.id === powerUp.id);
@@ -166,7 +155,6 @@ export function useAchievements() {
   return {
     userStats,
     checkAchievements,
-    unlockAchievement,
     addPowerUp,
     usePowerUp,
     addStreakShield,
