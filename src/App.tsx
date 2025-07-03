@@ -31,14 +31,16 @@ function App() {
   const [showSpinWheel, setShowSpinWheel] = useState(false);
   
   const { 
+    tasks,
     progress, 
     getTodayCompletionPercentage,
     canUseDaily,
     markDailyUsed,
-    addBonusXP
+    addBonusXP,
+    completeTask
   } = useTasks();
   
-  const { unlockAchievement } = useAchievements();
+  const { userStats, unlockAchievement, addPowerUp, usePowerUp, addStreakShield, useStreakShield } = useAchievements();
 
   // Check if user completed all tasks today and show spin wheel
   useEffect(() => {
@@ -115,9 +117,19 @@ function App() {
       case 'trophies':
         return <Trophies />;
       case 'inventory':
-        return <Inventory />;
+        return <Inventory 
+          powerUps={userStats.powerUps}
+          streakShields={userStats.streakShields}
+          bonusXP={0}
+          tasks={tasks}
+          canUseDaily={canUseDaily}
+          onUsePowerUp={usePowerUp}
+          onUseStreakShield={useStreakShield}
+          onUseXPBoost={addBonusXP}
+          onAutoCompleteTask={completeTask}
+        />;
       case 'profile':
-        return <Profile />;
+        return <Profile progress={progress} userStats={userStats} />;
       case 'avatar':
         return <Avatar progress={progress} size="large" showDetails={true} />;
       default:
