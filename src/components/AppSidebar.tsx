@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon, Backpack } from 'lucide-react';
+import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon, Backpack, Plus, Minus } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { XPBar } from './XPBar';
 
@@ -40,6 +40,8 @@ const planningItems = [
   { title: 'Routines', value: 'routines', icon: Clock },
   { title: 'Projects', value: 'projects', icon: FolderOpen },
   { title: 'Challenges', value: 'challenges', icon: Trophy },
+  { title: 'Side Habits', value: 'side-habits', icon: Plus },
+  { title: 'Negative Habits', value: 'negative-habits', icon: Minus },
 ];
 
 const trackingItems = [

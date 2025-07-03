@@ -20,10 +20,11 @@ export function useDataReset() {
       console.error('Error resetting remote data:', error);
     }
 
-    // Reset all localStorage data - comprehensive list
+    // Reset all localStorage data - comprehensive list including new habit data
     const keysToReset = [
       'tasks',
       'userProgress',
+      'progress',
       'bonusXP',
       'dailyUsage',
       'showLevelUp',

@@ -33,10 +33,15 @@ export function LongTermGoals() {
   const calculateLinkedHabitsProgress = (goal: Goal) => {
     if (!goal.linkedHabitIds || goal.linkedHabitIds.length === 0) return null;
     
+    console.log(`Calculating progress for goal: ${goal.title}`);
+    console.log(`Linked habit IDs:`, goal.linkedHabitIds);
+    
     // Get all linked habits
     const linkedHabits = tasks.filter(task => 
       goal.linkedHabitIds!.includes(task.id) && task.type === 'habit'
     );
+    
+    console.log(`Found ${linkedHabits.length} linked habits:`, linkedHabits.map(h => h.title));
     
     if (linkedHabits.length === 0) return null;
     
@@ -55,12 +60,17 @@ export function LongTermGoals() {
         t.type === 'habit' && 
         t.completed
       ).length;
+      
       totalProgress += Math.min(completedCount, habitTarget);
+      
+      console.log(`Habit ${habit.title}: ${completedCount}/${habitTarget} completed`);
     });
     
     if (totalTarget === 0) return null;
     
     const percentage = Math.round((totalProgress / totalTarget) * 100);
+    
+    console.log(`Total progress: ${totalProgress}/${totalTarget} = ${percentage}%`);
     
     return {
       current: totalProgress,
@@ -121,6 +131,9 @@ export function LongTermGoals() {
             const progress = getGoalProgress(goal.id);
             const linkedHabitsProgress = calculateLinkedHabitsProgress(goal);
             
+            // Use linked habits progress as the main progress indicator
+            const mainProgress = linkedHabitsProgress || progress;
+            
             return (
               <Card key={goal.id} className="w-full">
                 <CardHeader>
@@ -152,37 +165,27 @@ export function LongTermGoals() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Progress Tracking - prioritize linked habits progress */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Linked Habits Progress - main progress indicator */}
+                  {/* Main Progress Indicator */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {linkedHabitsProgress ? 'Habit Progress' : 'Milestone Progress'}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {mainProgress.percentage}%
+                      </span>
+                    </div>
+                    <Progress value={mainProgress.percentage} className="h-3" />
                     {linkedHabitsProgress && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Goal Progress</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {linkedHabitsProgress.current} / {linkedHabitsProgress.target} completed
-                          </span>
-                          <span className="text-muted-foreground">
-                            {linkedHabitsProgress.percentage}%
-                          </span>
-                        </div>
-                        <Progress value={linkedHabitsProgress.percentage} className="h-3" />
+                      <div className="text-xs text-muted-foreground">
+                        {linkedHabitsProgress.current} / {linkedHabitsProgress.target} habit completions
                       </div>
                     )}
-                    
-                    {/* Milestone Progress */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Milestone Progress</span>
-                        <span className="text-muted-foreground">{progress.percentage}%</span>
-                      </div>
-                      <Progress value={progress.percentage} className="h-3" />
+                    {!linkedHabitsProgress && (
                       <div className="text-xs text-muted-foreground">
                         {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
                       </div>
-                    </div>
+                    )}
                   </div>
                   
                   {/* Milestones */}

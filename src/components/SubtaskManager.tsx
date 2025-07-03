@@ -21,6 +21,10 @@ export function SubtaskManager({ subtasks, onSubtaskToggle, isMainTaskCompleted,
   const currentXP = Math.round((xpValue * progress) / 100);
   const remainingXP = xpValue - currentXP;
 
+  console.log(`SubtaskManager: ${completedSubtasks}/${subtasks.length} completed (${Math.round(progress)}%)`);
+  console.log(`XP calculation: ${currentXP}/${xpValue} XP (${Math.round(progress)}% of total)`);
+  console.log(`All completed: ${allSubtasksCompleted}, Streak eligible: ${allSubtasksCompleted}`);
+
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm text-muted-foreground">
@@ -45,18 +49,19 @@ export function SubtaskManager({ subtasks, onSubtaskToggle, isMainTaskCompleted,
       </div>
       
       {subtasks.length > 0 && !allSubtasksCompleted && (
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>XP awarded: {currentXP} / {xpValue} XP ({Math.round(progress)}%)</p>
-          <p>Complete all subtasks to count for streak and earn full XP</p>
+        <div className="text-xs text-muted-foreground space-y-1 bg-blue-50 p-2 rounded">
+          <p className="font-medium">XP Progress:</p>
+          <p>✅ XP awarded: {currentXP} / {xpValue} XP ({Math.round(progress)}%)</p>
+          <p>🔥 Streak: Only counts when ALL subtasks completed</p>
           {remainingXP > 0 && (
-            <p>{remainingXP} XP remaining when all subtasks completed</p>
+            <p>📈 {remainingXP} XP remaining when all subtasks completed</p>
           )}
         </div>
       )}
       
       {allSubtasksCompleted && (
-        <div className="text-xs text-green-600">
-          ✓ All subtasks completed - full XP ({xpValue} XP) and streak credit earned!
+        <div className="text-xs text-green-600 bg-green-50 p-2 rounded font-medium">
+          ✅ All subtasks completed - full XP ({xpValue} XP) and streak credit earned!
         </div>
       )}
     </div>

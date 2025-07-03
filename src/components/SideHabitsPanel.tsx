@@ -27,57 +27,57 @@ export function SideHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP, addTask } = useTasks();
+  const { addBonusXP } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
   const allCategories = [...CATEGORIES, ...customCategories];
 
   const addSideHabit = () => {
-    if (newHabitName.trim() && newHabitCategory) {
-      const newHabit: SideHabit = {
-        id: `side_habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: newHabitName.trim(),
-        category: newHabitCategory,
-        completedDates: [],
-        recurrence: newHabitRecurrence,
-        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        subtasks: newHabitSubtasks.filter(st => st.title.trim()),
-        xpValue: newHabitXP,
-        createdAt: new Date()
-      };
-      setSideHabits(prev => [...prev, newHabit]);
-      
-      // Also add to main tasks for tracking purposes
-      addTask({
-        title: newHabitName.trim(),
-        description: `Side habit: ${newHabitName.trim()}`,
-        subtasks: newHabitSubtasks.filter(st => st.title.trim()).map(st => ({
-          id: st.id,
-          title: st.title,
-          completed: false
-        })),
-        dueDate: new Date(),
-        priority: 'Medium',
-        recurrence: newHabitRecurrence,
-        xpValue: newHabitXP,
-        category: newHabitCategory,
-        taskType: 'normal',
-        type: 'habit',
-        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        customCategory: newHabitCategory,
-        numericTarget: 1
-      });
-      
-      // Reset form
-      setNewHabitName('');
-      setNewHabitCategory('');
-      setNewHabitXP(5);
-      setNewHabitRecurrence('None');
-      setNewHabitWeekDays([]);
-      setNewHabitSubtasks([]);
-      setIsFormOpen(false);
+    console.log('Adding side habit:', { newHabitName, newHabitCategory });
+    
+    if (!newHabitName.trim()) {
+      console.log('Habit name is empty');
+      return;
     }
+    
+    if (!newHabitCategory) {
+      console.log('Category not selected');
+      return;
+    }
+
+    const validSubtasks = newHabitSubtasks.filter(st => st.title.trim());
+    
+    const newHabit: SideHabit = {
+      id: `side_habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newHabitName.trim(),
+      category: newHabitCategory,
+      completedDates: [],
+      recurrence: newHabitRecurrence,
+      weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
+      subtasks: validSubtasks,
+      xpValue: newHabitXP,
+      createdAt: new Date()
+    };
+    
+    console.log('Created new habit:', newHabit);
+    
+    setSideHabits(prev => {
+      const updated = [...prev, newHabit];
+      console.log('Updated side habits:', updated);
+      return updated;
+    });
+    
+    // Reset form
+    setNewHabitName('');
+    setNewHabitCategory('');
+    setNewHabitXP(5);
+    setNewHabitRecurrence('None');
+    setNewHabitWeekDays([]);
+    setNewHabitSubtasks([]);
+    setIsFormOpen(false);
+    
+    console.log('Form reset and closed');
   };
 
   const toggleHabitCompletion = (habitId: string) => {

@@ -28,60 +28,60 @@ export function NegativeHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP, addTask } = useTasks();
+  const { addBonusXP } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
   const allCategories = [...CATEGORIES, ...customCategories];
 
   const addNegativeHabit = () => {
-    if (newHabitName.trim() && newHabitCategory) {
-      const newHabit: NegativeHabit = {
-        id: `negative_habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: newHabitName.trim(),
-        category: newHabitCategory,
-        xpValue: newHabitXP,
-        xpPenalty: newHabitPenalty,
-        avoidedDates: [],
-        failedDates: [],
-        recurrence: newHabitRecurrence,
-        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        subtasks: newHabitSubtasks.filter(st => st.title.trim()),
-        createdAt: new Date()
-      };
-      setNegativeHabits(prev => [...prev, newHabit]);
-      
-      // Also add to main tasks for tracking purposes
-      addTask({
-        title: `Avoid: ${newHabitName.trim()}`,
-        description: `Negative habit to avoid: ${newHabitName.trim()}`,
-        subtasks: newHabitSubtasks.filter(st => st.title.trim()).map(st => ({
-          id: st.id,
-          title: st.title,
-          completed: false
-        })),
-        dueDate: new Date(),
-        priority: 'High',
-        recurrence: newHabitRecurrence,
-        xpValue: newHabitXP,
-        category: newHabitCategory,
-        taskType: 'normal',
-        type: 'habit',
-        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        customCategory: newHabitCategory,
-        numericTarget: 1
-      });
-      
-      // Reset form
-      setNewHabitName('');
-      setNewHabitCategory('');
-      setNewHabitXP(10);
-      setNewHabitPenalty(5);
-      setNewHabitRecurrence('None');
-      setNewHabitWeekDays([]);
-      setNewHabitSubtasks([]);
-      setIsFormOpen(false);
+    console.log('Adding negative habit:', { newHabitName, newHabitCategory });
+    
+    if (!newHabitName.trim()) {
+      console.log('Habit name is empty');
+      return;
     }
+    
+    if (!newHabitCategory) {
+      console.log('Category not selected');
+      return;
+    }
+
+    const validSubtasks = newHabitSubtasks.filter(st => st.title.trim());
+    
+    const newHabit: NegativeHabit = {
+      id: `negative_habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newHabitName.trim(),
+      category: newHabitCategory,
+      xpValue: newHabitXP,
+      xpPenalty: newHabitPenalty,
+      avoidedDates: [],
+      failedDates: [],
+      recurrence: newHabitRecurrence,
+      weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
+      subtasks: validSubtasks,
+      createdAt: new Date()
+    };
+    
+    console.log('Created new negative habit:', newHabit);
+    
+    setNegativeHabits(prev => {
+      const updated = [...prev, newHabit];
+      console.log('Updated negative habits:', updated);
+      return updated;
+    });
+    
+    // Reset form
+    setNewHabitName('');
+    setNewHabitCategory('');
+    setNewHabitXP(10);
+    setNewHabitPenalty(5);
+    setNewHabitRecurrence('None');
+    setNewHabitWeekDays([]);
+    setNewHabitSubtasks([]);
+    setIsFormOpen(false);
+    
+    console.log('Form reset and closed');
   };
 
   const toggleHabitAvoidance = (habitId: string) => {

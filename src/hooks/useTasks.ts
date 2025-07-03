@@ -73,6 +73,9 @@ export function useTasks() {
           let xpReward = task.xpValue || 10;
           let shouldCountForStreak = true;
           
+          console.log(`Completing task: ${task.title}`);
+          console.log(`Is routine: ${isRoutine}, Base XP: ${xpReward}`);
+          
           // Calculate XP and streak based on subtask completion
           if (task.subtasks && task.subtasks.length > 0) {
             const completedSubtasks = task.subtasks.filter(st => st.completed).length;
@@ -93,22 +96,31 @@ export function useTasks() {
           // Apply XP multiplier
           const finalXP = applyMultiplier(xpReward);
           
-          console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}`);
+          console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}, Should count for streak: ${shouldCountForStreak}`);
           
-          // Update progress stats - count routine tasks for XP and completion
-          setProgress(p => ({
-            ...p,
-            totalXP: p.totalXP + finalXP,
-            tasksCompleted: p.tasksCompleted + 1,
-            habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
-            currentStreak: shouldCountForStreak ? p.currentStreak + 1 : p.currentStreak,
-            longestStreak: shouldCountForStreak && (p.currentStreak + 1) > p.longestStreak 
-              ? p.currentStreak + 1 
-              : p.longestStreak,
-            maxStreak: shouldCountForStreak && (p.currentStreak + 1) > p.maxStreak 
-              ? p.currentStreak + 1 
-              : p.maxStreak
-          }));
+          // Update progress stats - ALWAYS count routine tasks for XP and completion
+          setProgress(p => {
+            const newProgress = {
+              ...p,
+              totalXP: p.totalXP + finalXP,
+              tasksCompleted: p.tasksCompleted + 1,
+              habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
+            };
+            
+            // Only update streak if task qualifies for streak counting
+            if (shouldCountForStreak) {
+              newProgress.currentStreak = p.currentStreak + 1;
+              newProgress.longestStreak = (p.currentStreak + 1) > p.longestStreak 
+                ? p.currentStreak + 1 
+                : p.longestStreak;
+              newProgress.maxStreak = (p.currentStreak + 1) > p.maxStreak 
+                ? p.currentStreak + 1 
+                : p.maxStreak;
+            }
+            
+            console.log(`Progress updated:`, newProgress);
+            return newProgress;
+          });
           
           return { ...task, completed: true, completedAt: new Date() };
         }
@@ -124,10 +136,16 @@ export function useTasks() {
         if (task.id === taskId && task.subtasks) {
           const updatedSubtasks = task.subtasks.map(subtask => {
             if (subtask.id === subtaskId) {
-              return { ...subtask, completed: !subtask.completed };
+              const newCompleted = !subtask.completed;
+              console.log(`Toggling subtask: ${subtask.title} to ${newCompleted}`);
+              return { ...subtask, completed: newCompleted };
             }
             return subtask;
           });
+          
+          const completedCount = updatedSubtasks.filter(st => st.completed).length;
+          console.log(`Task ${task.title} now has ${completedCount}/${updatedSubtasks.length} subtasks completed`);
+          
           return { ...task, subtasks: updatedSubtasks };
         }
         return task;
@@ -173,10 +191,13 @@ export function useTasks() {
         const completedSubtasks = task.subtasks.filter(st => st.completed).length;
         const subtaskProgress = completedSubtasks / task.subtasks.length;
         totalProgress += subtaskProgress;
+        console.log(`Task ${task.title}: ${completedSubtasks}/${task.subtasks.length} subtasks = ${Math.round(subtaskProgress * 100)}% progress`);
       }
     });
     
-    return Math.round((totalProgress / todaysTasks.length) * 100);
+    const finalPercentage = Math.round((totalProgress / todaysTasks.length) * 100);
+    console.log(`Total completion: ${totalProgress}/${todaysTasks.length} = ${finalPercentage}%`);
+    return finalPercentage;
   };
 
   useEffect(() => {
