@@ -33,15 +33,10 @@ export function LongTermGoals() {
   const calculateLinkedHabitsProgress = (goal: Goal) => {
     if (!goal.linkedHabitIds || goal.linkedHabitIds.length === 0) return null;
     
-    console.log(`Calculating progress for goal: ${goal.title}`);
-    console.log(`Linked habit IDs:`, goal.linkedHabitIds);
-    
     // Get all linked habits
     const linkedHabits = tasks.filter(task => 
       goal.linkedHabitIds!.includes(task.id) && task.type === 'habit'
     );
-    
-    console.log(`Found ${linkedHabits.length} linked habits`);
     
     if (linkedHabits.length === 0) return null;
     
@@ -50,7 +45,7 @@ export function LongTermGoals() {
     let totalTarget = 0;
     
     linkedHabits.forEach(habit => {
-      // Use numericTarget if available, otherwise default to 1
+      // Safely access numericTarget with fallback
       const habitTarget = habit.numericTarget || 1;
       totalTarget += habitTarget;
       
@@ -60,16 +55,12 @@ export function LongTermGoals() {
         t.type === 'habit' && 
         t.completed
       ).length;
-      
-      console.log(`Habit "${habit.title}": ${completedCount}/${habitTarget} completed`);
       totalProgress += Math.min(completedCount, habitTarget);
     });
     
     if (totalTarget === 0) return null;
     
     const percentage = Math.round((totalProgress / totalTarget) * 100);
-    
-    console.log(`Total habit progress: ${totalProgress}/${totalTarget} = ${percentage}%`);
     
     return {
       current: totalProgress,
@@ -162,12 +153,12 @@ export function LongTermGoals() {
                 
                 <CardContent className="space-y-4">
                   {/* Progress Tracking */}
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* Linked Habits Progress - Primary Progress Indicator */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Linked Habits Progress */}
                     {linkedHabitsProgress && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Goal Progress (from linked habits)</span>
+                          <span className="text-sm font-medium">Linked Habits Progress</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">
@@ -181,19 +172,17 @@ export function LongTermGoals() {
                       </div>
                     )}
                     
-                    {/* Milestone Progress - Secondary Progress Indicator */}
-                    {goal.milestones && goal.milestones.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">Milestone Progress</span>
-                          <span className="text-muted-foreground">{progress.percentage}%</span>
-                        </div>
-                        <Progress value={progress.percentage} className="h-2" />
-                        <div className="text-xs text-muted-foreground">
-                          {progress.completedSubtasks} of {progress.totalSubtasks} milestone tasks completed
-                        </div>
+                    {/* Milestone Progress */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium">Milestone Progress</span>
+                        <span className="text-muted-foreground">{progress.percentage}%</span>
                       </div>
-                    )}
+                      <Progress value={progress.percentage} className="h-3" />
+                      <div className="text-xs text-muted-foreground">
+                        {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
+                      </div>
+                    </div>
                   </div>
                   
                   {/* Milestones */}
