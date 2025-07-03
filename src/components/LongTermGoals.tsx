@@ -40,12 +40,12 @@ export function LongTermGoals() {
     
     if (linkedHabits.length === 0) return null;
     
-    // Calculate total progress from all linked habits
+    // Calculate total progress from all linked habits based on their numeric targets
     let totalProgress = 0;
     let totalTarget = 0;
     
     linkedHabits.forEach(habit => {
-      // Safely access numericTarget with fallback
+      // Use numericTarget for progress calculation
       const habitTarget = habit.numericTarget || 1;
       totalTarget += habitTarget;
       
@@ -152,13 +152,13 @@ export function LongTermGoals() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Progress Tracking */}
+                  {/* Progress Tracking - prioritize linked habits progress */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Linked Habits Progress */}
+                    {/* Linked Habits Progress - main progress indicator */}
                     {linkedHabitsProgress && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Linked Habits Progress</span>
+                          <span className="text-sm font-medium">Goal Progress</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">

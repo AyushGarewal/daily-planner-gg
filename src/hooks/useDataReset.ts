@@ -56,7 +56,12 @@ export function useDataReset() {
       'app-theme',
       'userPreferences',
       'gameSettings',
-      'notificationSettings'
+      'notificationSettings',
+      'sideHabits',
+      'negativeHabits',
+      'goal-journal-entries',
+      'goal-milestones',
+      'goal-subtasks'
     ];
 
     keysToReset.forEach(key => {
@@ -68,6 +73,17 @@ export function useDataReset() {
       totalXP: 0,
       level: 1,
       currentStreak: 0,
+      maxStreak: 0,
+    }));
+
+    localStorage.setItem('progress', JSON.stringify({
+      totalXP: 0,
+      level: 1,
+      tasksCompleted: 0,
+      habitsCompleted: 0,
+      dailyCompletionRate: 0,
+      currentStreak: 0,
+      longestStreak: 0,
       maxStreak: 0,
     }));
 
@@ -104,6 +120,7 @@ export function useDataReset() {
       '• Custom categories\n' +
       '• Routines and challenges\n' +
       '• Theme and preferences\n' +
+      '• Side habits and negative habits\n' +
       '• All other app data\n\n' +
       'This action cannot be undone!'
     );

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
 import { WeekdaySelector } from './WeekdaySelector';
 import { NegativeHabit, NegativeHabitSubtask } from '../types/sideHabits';
+import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
 
 export function NegativeHabitsPanel() {
@@ -25,9 +27,12 @@ export function NegativeHabitsPanel() {
   const [newHabitWeekDays, setNewHabitWeekDays] = useState<number[]>([]);
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
-  const { categories } = useCustomCategories();
+  const { categories: customCategories } = useCustomCategories();
   const { addBonusXP, addTask } = useTasks();
   const today = new Date().toDateString();
+
+  // Combine default and custom categories
+  const allCategories = [...CATEGORIES, ...customCategories];
 
   const addNegativeHabit = () => {
     if (newHabitName.trim() && newHabitCategory) {
@@ -63,7 +68,8 @@ export function NegativeHabitsPanel() {
         taskType: 'normal',
         type: 'habit',
         weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        customCategory: newHabitCategory
+        customCategory: newHabitCategory,
+        numericTarget: 1
       });
       
       // Reset form
@@ -230,7 +236,7 @@ export function NegativeHabitsPanel() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((category) => (
+                      {allCategories.map((category) => (
                         <SelectItem key={String(category)} value={String(category)}>
                           {String(category)}
                         </SelectItem>

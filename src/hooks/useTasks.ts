@@ -69,6 +69,7 @@ export function useTasks() {
       const updatedTasks = prev.map(task => {
         if (task.id === id) {
           const isHabit = task.type === 'habit';
+          const isRoutine = task.isRoutine;
           let xpReward = task.xpValue || 10;
           let shouldCountForStreak = true;
           
@@ -92,7 +93,9 @@ export function useTasks() {
           // Apply XP multiplier
           const finalXP = applyMultiplier(xpReward);
           
-          // Update progress stats - only count for streak if fully completed
+          console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}`);
+          
+          // Update progress stats - count routine tasks for XP and completion
           setProgress(p => ({
             ...p,
             totalXP: p.totalXP + finalXP,
@@ -155,6 +158,27 @@ export function useTasks() {
     return Array.from(uniqueHabits.values());
   };
 
+  // Calculate today's completion percentage including partial subtask completion
+  const getTodayCompletionPercentage = (): number => {
+    const todaysTasks = getTodaysTasks();
+    
+    if (todaysTasks.length === 0) return 100;
+    
+    let totalProgress = 0;
+    
+    todaysTasks.forEach(task => {
+      if (task.completed) {
+        totalProgress += 1;
+      } else if (task.subtasks && task.subtasks.length > 0) {
+        const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+        const subtaskProgress = completedSubtasks / task.subtasks.length;
+        totalProgress += subtaskProgress;
+      }
+    });
+    
+    return Math.round((totalProgress / todaysTasks.length) * 100);
+  };
+
   useEffect(() => {
     // Reset daily usage at midnight
     const now = new Date();
@@ -198,14 +222,6 @@ export function useTasks() {
 
   const shouldShowSurplusTasks = (): boolean => {
     return progress.level >= 3;
-  };
-
-  const getTodayCompletionPercentage = (): number => {
-    const todaysTasks = getTodaysTasks();
-    const completedTasks = todaysTasks.filter(task => task.completed);
-    const totalTasks = todaysTasks.length;
-    
-    return totalTasks === 0 ? 100 : Math.round((completedTasks.length / totalTasks) * 100);
   };
 
   const getTasksForDate = (date: Date): Task[] => {

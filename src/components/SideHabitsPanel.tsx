@@ -13,6 +13,7 @@ import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
+import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
 
 export function SideHabitsPanel() {
@@ -25,9 +26,12 @@ export function SideHabitsPanel() {
   const [newHabitWeekDays, setNewHabitWeekDays] = useState<number[]>([]);
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
-  const { categories } = useCustomCategories();
+  const { categories: customCategories } = useCustomCategories();
   const { addBonusXP, addTask } = useTasks();
   const today = new Date().toDateString();
+
+  // Combine default and custom categories
+  const allCategories = [...CATEGORIES, ...customCategories];
 
   const addSideHabit = () => {
     if (newHabitName.trim() && newHabitCategory) {
@@ -61,7 +65,8 @@ export function SideHabitsPanel() {
         taskType: 'normal',
         type: 'habit',
         weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        customCategory: newHabitCategory
+        customCategory: newHabitCategory,
+        numericTarget: 1
       });
       
       // Reset form
@@ -196,7 +201,7 @@ export function SideHabitsPanel() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((category) => (
+                      {allCategories.map((category) => (
                         <SelectItem key={String(category)} value={String(category)}>
                           {String(category)}
                         </SelectItem>
