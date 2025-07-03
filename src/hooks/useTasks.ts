@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -121,10 +122,15 @@ export function useTasks() {
         if (task.id === taskId && task.subtasks) {
           const updatedSubtasks = task.subtasks.map(subtask => {
             if (subtask.id === subtaskId) {
+              console.log(`Toggling subtask: ${subtask.title}`);
               return { ...subtask, completed: !subtask.completed };
             }
             return subtask;
           });
+          
+          const completedCount = updatedSubtasks.filter(st => st.completed).length;
+          console.log(`Subtask update - ${completedCount}/${updatedSubtasks.length} completed`);
+          
           return { ...task, subtasks: updatedSubtasks };
         }
         return task;
@@ -202,10 +208,26 @@ export function useTasks() {
 
   const getTodayCompletionPercentage = (): number => {
     const todaysTasks = getTodaysTasks();
-    const completedTasks = todaysTasks.filter(task => task.completed);
-    const totalTasks = todaysTasks.length;
     
-    return totalTasks === 0 ? 100 : Math.round((completedTasks.length / totalTasks) * 100);
+    if (todaysTasks.length === 0) return 100;
+    
+    let totalProgress = 0;
+    
+    todaysTasks.forEach(task => {
+      if (task.completed) {
+        totalProgress += 1;
+      } else if (task.subtasks && task.subtasks.length > 0) {
+        // Count partial completion based on subtasks
+        const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+        const subtaskProgress = completedSubtasks / task.subtasks.length;
+        totalProgress += subtaskProgress;
+      }
+    });
+    
+    const percentage = Math.round((totalProgress / todaysTasks.length) * 100);
+    console.log(`Today's completion: ${totalProgress}/${todaysTasks.length} = ${percentage}%`);
+    
+    return percentage;
   };
 
   const getTasksForDate = (date: Date): Task[] => {

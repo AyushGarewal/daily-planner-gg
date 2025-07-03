@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon, Backpack } from 'lucide-react';
+import { Calendar, List, BarChart3, Heart, Trophy, Zap, User, Sun, Clock, FolderOpen, Moon, Backpack, Shield, Star } from 'lucide-react';
 import { Avatar } from './Avatar';
 import { XPBar } from './XPBar';
 
@@ -40,6 +40,11 @@ const planningItems = [
   { title: 'Routines', value: 'routines', icon: Clock },
   { title: 'Projects', value: 'projects', icon: FolderOpen },
   { title: 'Challenges', value: 'challenges', icon: Trophy },
+];
+
+const habitItems = [
+  { title: 'Side Habits', value: 'side-habits', icon: Star },
+  { title: 'Negative Habits', value: 'negative-habits', icon: Shield },
 ];
 
 const trackingItems = [
@@ -125,6 +130,26 @@ export function AppSidebar({ activeTab, onTabChange, progress }: AppSidebarProps
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleTabClick(item.value)}
+                    className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {state !== "collapsed" && <span>{item.title}</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Habits Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Habits</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {habitItems.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton
                     onClick={() => handleTabClick(item.value)}
