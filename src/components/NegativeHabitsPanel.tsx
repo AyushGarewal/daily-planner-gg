@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,7 @@ export function NegativeHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
   const { categories } = useCustomCategories();
-  const { addBonusXP } = useTasks();
+  const { addBonusXP, addTask } = useTasks();
   const today = new Date().toDateString();
 
   const addNegativeHabit = () => {
@@ -42,10 +41,30 @@ export function NegativeHabitsPanel() {
         failedDates: [],
         recurrence: newHabitRecurrence,
         weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        subtasks: newHabitSubtasks,
+        subtasks: newHabitSubtasks.filter(st => st.title.trim()),
         createdAt: new Date()
       };
       setNegativeHabits(prev => [...prev, newHabit]);
+      
+      // Also add to main tasks for tracking purposes
+      addTask({
+        title: `Avoid: ${newHabitName.trim()}`,
+        description: `Negative habit to avoid: ${newHabitName.trim()}`,
+        subtasks: newHabitSubtasks.filter(st => st.title.trim()).map(st => ({
+          id: st.id,
+          title: st.title,
+          completed: false
+        })),
+        dueDate: new Date(),
+        priority: 'High',
+        recurrence: newHabitRecurrence,
+        xpValue: newHabitXP,
+        category: newHabitCategory,
+        taskType: 'normal',
+        type: 'habit',
+        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
+        customCategory: newHabitCategory
+      });
       
       // Reset form
       setNewHabitName('');

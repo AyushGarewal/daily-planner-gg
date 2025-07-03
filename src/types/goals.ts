@@ -9,7 +9,7 @@ export interface Goal {
   isCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
-  // Remove separate numeric target, instead link to habit progress
+  // Link to habit progress instead of separate numeric target
   linkedTaskIds?: string[];
   linkedHabitIds?: string[];
   milestones?: GoalMilestone[];

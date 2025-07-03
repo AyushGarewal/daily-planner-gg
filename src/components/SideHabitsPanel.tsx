@@ -12,7 +12,6 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
 import { WeekdaySelector } from './WeekdaySelector';
-import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
 import { getDay } from 'date-fns';
 
@@ -27,7 +26,7 @@ export function SideHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories } = useCustomCategories();
-  const { addBonusXP } = useTasks();
+  const { addBonusXP, addTask } = useTasks();
   const today = new Date().toDateString();
 
   const addSideHabit = () => {
@@ -39,11 +38,31 @@ export function SideHabitsPanel() {
         completedDates: [],
         recurrence: newHabitRecurrence,
         weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
-        subtasks: newHabitSubtasks,
+        subtasks: newHabitSubtasks.filter(st => st.title.trim()),
         xpValue: newHabitXP,
         createdAt: new Date()
       };
       setSideHabits(prev => [...prev, newHabit]);
+      
+      // Also add to main tasks for tracking purposes
+      addTask({
+        title: newHabitName.trim(),
+        description: `Side habit: ${newHabitName.trim()}`,
+        subtasks: newHabitSubtasks.filter(st => st.title.trim()).map(st => ({
+          id: st.id,
+          title: st.title,
+          completed: false
+        })),
+        dueDate: new Date(),
+        priority: 'Medium',
+        recurrence: newHabitRecurrence,
+        xpValue: newHabitXP,
+        category: newHabitCategory,
+        taskType: 'normal',
+        type: 'habit',
+        weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
+        customCategory: newHabitCategory
+      });
       
       // Reset form
       setNewHabitName('');

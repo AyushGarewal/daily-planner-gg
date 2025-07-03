@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -71,31 +70,41 @@ export function useTasks() {
         if (task.id === id) {
           const isHabit = task.type === 'habit';
           let xpReward = task.xpValue || 10;
+          let shouldCountForStreak = true;
           
-          // Calculate XP based on subtask completion for habits
-          if (isHabit && task.subtasks && task.subtasks.length > 0) {
+          // Calculate XP and streak based on subtask completion
+          if (task.subtasks && task.subtasks.length > 0) {
             const completedSubtasks = task.subtasks.filter(st => st.completed).length;
             const totalSubtasks = task.subtasks.length;
             const completionPercentage = completedSubtasks / totalSubtasks;
             
-            // Only award full XP and count for streak if ALL subtasks are completed
-            if (completionPercentage === 1) {
-              xpReward = task.xpValue || 10;
-            } else {
-              // Award partial XP based on completion percentage
-              xpReward = Math.round((task.xpValue || 10) * completionPercentage);
-            }
+            console.log(`Task: ${task.title}, Subtasks: ${completedSubtasks}/${totalSubtasks} (${Math.round(completionPercentage * 100)}%)`);
+            
+            // Award proportional XP based on completion percentage
+            xpReward = Math.round((task.xpValue || 10) * completionPercentage);
+            
+            // Only count for streak if ALL subtasks are completed (100%)
+            shouldCountForStreak = completionPercentage === 1;
+            
+            console.log(`XP awarded: ${xpReward}, Counts for streak: ${shouldCountForStreak}`);
           }
           
           // Apply XP multiplier
           const finalXP = applyMultiplier(xpReward);
           
-          // Update progress stats
+          // Update progress stats - only count for streak if fully completed
           setProgress(p => ({
             ...p,
             totalXP: p.totalXP + finalXP,
             tasksCompleted: p.tasksCompleted + 1,
             habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
+            currentStreak: shouldCountForStreak ? p.currentStreak + 1 : p.currentStreak,
+            longestStreak: shouldCountForStreak && (p.currentStreak + 1) > p.longestStreak 
+              ? p.currentStreak + 1 
+              : p.longestStreak,
+            maxStreak: shouldCountForStreak && (p.currentStreak + 1) > p.maxStreak 
+              ? p.currentStreak + 1 
+              : p.maxStreak
           }));
           
           return { ...task, completed: true, completedAt: new Date() };

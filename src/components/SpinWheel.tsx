@@ -47,6 +47,7 @@ export function SpinWheel({ onReward, onClose }: SpinWheelProps) {
       
       // Handle XP multiplier reward - Fixed: Now properly gives 1.5x multiplier
       if (selectedReward.type === 'xp-multiplier') {
+        console.log('Activating XP multiplier: 1.5x for 1 hour');
         activateMultiplier(1.5, 1); // 1.5x multiplier for 1 hour
       }
       

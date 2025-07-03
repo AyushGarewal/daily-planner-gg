@@ -41,9 +41,16 @@ export function SubtaskManager({ subtasks, onSubtaskToggle, isMainTaskCompleted 
       </div>
       
       {subtasks.length > 0 && !allSubtasksCompleted && (
-        <p className="text-xs text-muted-foreground">
-          Complete all subtasks to finish the main task
-        </p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p>XP awarded: {Math.round(progress)}% of total task XP</p>
+          <p>Complete all subtasks to count for streak</p>
+        </div>
+      )}
+      
+      {allSubtasksCompleted && (
+        <div className="text-xs text-green-600">
+          ✓ All subtasks completed - full XP and streak credit earned!
+        </div>
       )}
     </div>
   );
