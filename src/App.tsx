@@ -1,27 +1,38 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { TaskGamificationApp } from './components/TaskGamificationApp';
+import { HabitPerformanceTracker } from './components/HabitPerformanceTracker';
+import { SideHabitsPanel } from './components/SideHabitsPanel';
+import { NegativeHabitsPanel } from './components/NegativeHabitsPanel';
+import { ProjectManager } from './components/ProjectManager';
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from './components/AppSidebar';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <Router>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full">
+          <AppSidebar />
+          <main className="flex-1">
+            {/* Remove global header with Reset All button */}
+            <div className="p-6">
+              <Routes>
+                <Route path="/" element={<TaskGamificationApp />} />
+                <Route path="/habits" element={<HabitPerformanceTracker />} />
+                <Route path="/side-habits" element={<SideHabitsPanel />} />
+                <Route path="/negative-habits" element={<NegativeHabitsPanel />} />
+                <Route path="/projects" element={<ProjectManager />} />
+              </Routes>
+            </div>
+          </main>
+        </div>
+        <Toaster />
+      </SidebarProvider>
+    </Router>
+  );
+}
 
 export default App;

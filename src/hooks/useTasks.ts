@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -66,6 +67,9 @@ export function useTasks() {
 
   const completeTask = (id: string) => {
     setTasks(prev => {
+      const task = prev.find(t => t.id === id);
+      if (!task || task.completed) return prev;
+
       const updatedTasks = prev.map(task => {
         if (task.id === id) {
           const isHabit = task.type === 'habit';
@@ -127,6 +131,35 @@ export function useTasks() {
         return task;
       });
       return updatedTasks;
+    });
+  };
+
+  const uncompleteTask = (id: string) => {
+    setTasks(prev => {
+      const task = prev.find(t => t.id === id);
+      if (!task || !task.completed) return prev;
+
+      // Calculate XP to deduct
+      let xpToDeduct = task.xpValue || 10;
+      if (task.subtasks && task.subtasks.length > 0) {
+        const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+        const completionPercentage = completedSubtasks / task.subtasks.length;
+        xpToDeduct = Math.round((task.xpValue || 10) * completionPercentage);
+      }
+      
+      const finalXPDeduction = applyMultiplier(xpToDeduct);
+      console.log(`Deducting ${finalXPDeduction} XP for uncompleting task: ${task.title}`);
+
+      // Update progress
+      setProgress(p => ({
+        ...p,
+        totalXP: Math.max(0, p.totalXP - finalXPDeduction),
+        tasksCompleted: Math.max(0, p.tasksCompleted - 1),
+        habitsCompleted: task.type === 'habit' ? Math.max(0, p.habitsCompleted - 1) : p.habitsCompleted,
+        currentStreak: Math.max(0, p.currentStreak - 1),
+      }));
+
+      return prev.map(t => t.id === id ? { ...t, completed: false, completedAt: undefined } : t);
     });
   };
 
@@ -294,7 +327,7 @@ export function useTasks() {
     
     // Update progress stats
     setProgress(prev => {
-      const newTotalXP = prev.totalXP + multipliedAmount;
+      const newTotalXP = Math.max(0, prev.totalXP + multipliedAmount);
       const newLevel = Math.floor(newTotalXP / 100) + 1;
       const leveledUp = newLevel > prev.level;
       
@@ -320,12 +353,13 @@ export function useTasks() {
     updateTask,
     deleteTask,
     completeTask,
+    uncompleteTask,
     toggleSubtask,
     addBonusXP,
     canUseDaily,
     markDailyUsed,
     setShowLevelUp,
-    setProgress, // Expose setProgress function
+    setProgress,
     getTodaysTasks,
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,
