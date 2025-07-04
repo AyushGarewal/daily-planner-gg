@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,20 @@ interface DetailedHabitStats {
   }>;
 }
 
+interface UnifiedHabit {
+  id: string;
+  title: string;
+  category: string;
+  type: 'habit';
+  recurrence?: 'None' | 'Daily' | 'Weekly';
+  weekDays?: number[];
+  isRoutine: boolean;
+  completedDates?: string[];
+  dueDate: Date | string;
+  xpValue?: number;
+  habitType: 'regular' | 'side' | 'negative';
+}
+
 export function HabitPerformanceTracker() {
   const { tasks, getUserHabits } = useTasks();
   const [selectedHabit, setSelectedHabit] = useState<string>('');
@@ -53,10 +68,22 @@ export function HabitPerformanceTracker() {
   
   const userHabits = getUserHabits();
   
-  // Combine all habits for tracking
-  const allHabitsForTracking = [
-    ...userHabits,
-    ...sideHabits.map(habit => ({
+  // Combine all habits for tracking with unified interface
+  const allHabitsForTracking: UnifiedHabit[] = [
+    ...userHabits.map(habit => ({
+      id: habit.id,
+      title: habit.title,
+      category: habit.category,
+      type: 'habit' as const,
+      recurrence: undefined,
+      weekDays: undefined,
+      isRoutine: habit.isRoutine || false,
+      completedDates: undefined,
+      dueDate: habit.dueDate,
+      xpValue: habit.xpValue || 5,
+      habitType: 'regular' as const
+    })),
+    ...sideHabits.map((habit): UnifiedHabit => ({
       id: habit.id,
       title: habit.name,
       category: habit.category,
@@ -66,9 +93,10 @@ export function HabitPerformanceTracker() {
       isRoutine: false,
       completedDates: habit.completedDates || [],
       dueDate: habit.createdAt || new Date(),
-      xpValue: habit.xpValue || 5
+      xpValue: habit.xpValue || 5,
+      habitType: 'side' as const
     })),
-    ...negativeHabits.map(habit => ({
+    ...negativeHabits.map((habit): UnifiedHabit => ({
       id: habit.id,
       title: `[Avoid] ${habit.name}`,
       category: habit.category,
@@ -78,7 +106,8 @@ export function HabitPerformanceTracker() {
       isRoutine: false,
       completedDates: habit.avoidedDates || [],
       dueDate: habit.createdAt || new Date(),
-      xpValue: habit.xpValue || 10
+      xpValue: habit.xpValue || 10,
+      habitType: 'negative' as const
     }))
   ];
   
@@ -113,10 +142,10 @@ export function HabitPerformanceTracker() {
     const creationDate = startOfDay(new Date(baseHabit.dueDate));
     const today = startOfDay(new Date());
     
-    // Get all instances of this habit (including recurring ones and side/negative habits)
+    // Get all instances of this habit based on type
     let habitInstances = [];
     
-    if (baseHabit.id.startsWith('side_habit_') || baseHabit.id.startsWith('negative_habit_')) {
+    if (baseHabit.habitType === 'side' || baseHabit.habitType === 'negative') {
       // For side habits and negative habits, use their completion dates directly
       const completedDates = baseHabit.completedDates || [];
       habitInstances = completedDates.map(date => ({
@@ -151,6 +180,9 @@ export function HabitPerformanceTracker() {
         shouldBeScheduled = true;
       } else if (baseHabit.recurrence === 'Weekly' && baseHabit.weekDays) {
         shouldBeScheduled = baseHabit.weekDays.includes(dayOfWeek);
+      } else if (baseHabit.habitType === 'regular') {
+        // For regular habits, assume they should be scheduled daily
+        shouldBeScheduled = true;
       }
       
       const instance = habitInstances.find(task => 
@@ -366,8 +398,8 @@ export function HabitPerformanceTracker() {
               <SelectItem key={habit.id} value={habit.id}>
                 {habit.title}
                 {habit.isRoutine && <span className="ml-2 text-xs text-blue-600">(Routine)</span>}
-                {habit.id.startsWith('side_habit_') && <span className="ml-2 text-xs text-green-600">(Side)</span>}
-                {habit.id.startsWith('negative_habit_') && <span className="ml-2 text-xs text-red-600">(Avoid)</span>}
+                {habit.habitType === 'side' && <span className="ml-2 text-xs text-green-600">(Side)</span>}
+                {habit.habitType === 'negative' && <span className="ml-2 text-xs text-red-600">(Avoid)</span>}
               </SelectItem>
             ))}
           </SelectContent>
