@@ -12,6 +12,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
 import { WeekdaySelector } from './WeekdaySelector';
+import { SubtaskManager } from './SubtaskManager';
 import { NegativeHabit, NegativeHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
@@ -28,7 +29,7 @@ export function NegativeHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP } = useTasks();
+  const { addBonusXP, progress, setProgress } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
@@ -109,7 +110,15 @@ export function NegativeHabitsPanel() {
           }
           
           if (xpToAdd > 0) {
+            console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
             addBonusXP(xpToAdd);
+            
+            // Update progress stats directly
+            setProgress(prevProgress => ({
+              ...prevProgress,
+              totalXP: prevProgress.totalXP + xpToAdd,
+              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+            }));
           }
         }
         
@@ -135,7 +144,15 @@ export function NegativeHabitsPanel() {
         
         // Apply XP penalty if failed for the first time today
         if (!hasFailed) {
+          console.log(`Removing ${habit.xpPenalty} XP for failing negative habit: ${habit.name}`);
           addBonusXP(-habit.xpPenalty);
+          
+          // Update progress stats directly
+          setProgress(prevProgress => ({
+            ...prevProgress,
+            totalXP: Math.max(0, prevProgress.totalXP - habit.xpPenalty),
+            level: Math.floor(Math.max(0, prevProgress.totalXP - habit.xpPenalty) / 100) + 1
+          }));
         }
         
         return updatedHabit;
@@ -407,19 +424,12 @@ export function NegativeHabitsPanel() {
                   </div>
                   
                   {habit.subtasks.length > 0 && (
-                    <div className="ml-6 space-y-2">
-                      {habit.subtasks.map((subtask) => (
-                        <div key={subtask.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={subtask.completed}
-                            onCheckedChange={() => toggleSubtask(habit.id, subtask.id)}
-                          />
-                          <span className={`text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
-                            {subtask.title}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <SubtaskManager
+                      subtasks={habit.subtasks}
+                      onSubtaskToggle={(subtaskId) => toggleSubtask(habit.id, subtaskId)}
+                      isMainTaskCompleted={isAvoided}
+                      xpValue={habit.xpValue}
+                    />
                   )}
                 </div>
               );

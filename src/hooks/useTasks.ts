@@ -290,7 +290,7 @@ export function useTasks() {
   const addBonusXP = (amount: number) => {
     // Apply multiplier to bonus XP
     const multipliedAmount = applyMultiplier(amount);
-    setBonusXP(prev => prev + multipliedAmount);
+    setBonusXP(prev => prev + multipliedAmount); 
     
     // Update progress stats
     setProgress(prev => {
@@ -325,6 +325,7 @@ export function useTasks() {
     canUseDaily,
     markDailyUsed,
     setShowLevelUp,
+    setProgress, // Expose setProgress function
     getTodaysTasks,
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,

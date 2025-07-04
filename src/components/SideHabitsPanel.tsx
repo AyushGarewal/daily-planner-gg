@@ -12,6 +12,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
 import { WeekdaySelector } from './WeekdaySelector';
+import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
@@ -27,7 +28,7 @@ export function SideHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP } = useTasks();
+  const { addBonusXP, progress, setProgress } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
@@ -102,7 +103,15 @@ export function SideHabitsPanel() {
           }
           
           if (xpToAdd > 0) {
+            console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
             addBonusXP(xpToAdd);
+            
+            // Update progress stats directly
+            setProgress(prevProgress => ({
+              ...prevProgress,
+              totalXP: prevProgress.totalXP + xpToAdd,
+              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+            }));
           }
         }
         
@@ -351,19 +360,12 @@ export function SideHabitsPanel() {
                   </div>
                   
                   {habit.subtasks.length > 0 && (
-                    <div className="ml-6 space-y-2">
-                      {habit.subtasks.map((subtask) => (
-                        <div key={subtask.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={subtask.completed}
-                            onCheckedChange={() => toggleSubtask(habit.id, subtask.id)}
-                          />
-                          <span className={`text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
-                            {subtask.title}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <SubtaskManager
+                      subtasks={habit.subtasks}
+                      onSubtaskToggle={(subtaskId) => toggleSubtask(habit.id, subtaskId)}
+                      isMainTaskCompleted={isCompleted}
+                      xpValue={habit.xpValue}
+                    />
                   )}
                 </div>
               );

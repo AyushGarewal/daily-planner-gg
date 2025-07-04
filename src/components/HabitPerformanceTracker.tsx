@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Calendar, TrendingUp, Award, Target, BarChart3, Flame, Clock, Zap, CheckCircle, XCircle } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, subDays, getDay, isAfter, isBefore, startOfDay, differenceInDays } from 'date-fns';
 import { useTasks } from '../hooks/useTasks';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface DetailedHabitStats {
   habitName: string;
@@ -47,17 +47,50 @@ export function HabitPerformanceTracker() {
   const [selectedHabit, setSelectedHabit] = useState<string>('');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'all'>('all');
   
+  // Get side habits and negative habits from localStorage
+  const [sideHabits] = useLocalStorage<any[]>('sideHabits', []);
+  const [negativeHabits] = useLocalStorage<any[]>('negativeHabits', []);
+  
   const userHabits = getUserHabits();
+  
+  // Combine all habits for tracking
+  const allHabitsForTracking = [
+    ...userHabits,
+    ...sideHabits.map(habit => ({
+      id: habit.id,
+      title: habit.name,
+      category: habit.category,
+      type: 'habit' as const,
+      recurrence: habit.recurrence,
+      weekDays: habit.weekDays,
+      isRoutine: false,
+      completedDates: habit.completedDates || [],
+      dueDate: habit.createdAt || new Date(),
+      xpValue: habit.xpValue || 5
+    })),
+    ...negativeHabits.map(habit => ({
+      id: habit.id,
+      title: `[Avoid] ${habit.name}`,
+      category: habit.category,
+      type: 'habit' as const,
+      recurrence: habit.recurrence,
+      weekDays: habit.weekDays,
+      isRoutine: false,
+      completedDates: habit.avoidedDates || [],
+      dueDate: habit.createdAt || new Date(),
+      xpValue: habit.xpValue || 10
+    }))
+  ];
   
   // Set default selected habit if none selected
   React.useEffect(() => {
-    if (userHabits.length > 0 && !selectedHabit) {
-      setSelectedHabit(userHabits[0].id);
+    if (allHabitsForTracking.length > 0 && !selectedHabit) {
+      setSelectedHabit(allHabitsForTracking[0].id);
     }
-  }, [userHabits, selectedHabit]);
+  }, [allHabitsForTracking, selectedHabit]);
 
   const calculateDetailedHabitStats = (habitId: string): DetailedHabitStats => {
-    const baseHabit = userHabits.find(h => h.id === habitId);
+    const baseHabit = allHabitsForTracking.find(h => h.id === habitId);
     if (!baseHabit) {
       return {
         habitName: '',
@@ -80,13 +113,27 @@ export function HabitPerformanceTracker() {
     const creationDate = startOfDay(new Date(baseHabit.dueDate));
     const today = startOfDay(new Date());
     
-    // Get all instances of this habit (including recurring ones)
-    const habitInstances = tasks.filter(task => 
-      task.type === 'habit' && 
-      task.title === baseHabit.title && 
-      task.category === baseHabit.category &&
-      !isBefore(new Date(task.dueDate), creationDate) // Only count from creation date forward
-    );
+    // Get all instances of this habit (including recurring ones and side/negative habits)
+    let habitInstances = [];
+    
+    if (baseHabit.id.startsWith('side_habit_') || baseHabit.id.startsWith('negative_habit_')) {
+      // For side habits and negative habits, use their completion dates directly
+      const completedDates = baseHabit.completedDates || [];
+      habitInstances = completedDates.map(date => ({
+        dueDate: date,
+        completed: true,
+        title: baseHabit.title,
+        type: 'habit' as const
+      }));
+    } else {
+      // For regular habits, use the existing logic
+      habitInstances = tasks.filter(task => 
+        task.type === 'habit' && 
+        task.title === baseHabit.title && 
+        task.category === baseHabit.category &&
+        !isBefore(new Date(task.dueDate), creationDate)
+      );
+    }
 
     // Calculate daily data from creation date to today
     const daysSinceCreation = differenceInDays(today, creationDate);
@@ -279,7 +326,7 @@ export function HabitPerformanceTracker() {
     );
   };
 
-  if (userHabits.length === 0) {
+  if (allHabitsForTracking.length === 0) {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="text-center py-12">
@@ -315,10 +362,12 @@ export function HabitPerformanceTracker() {
             <SelectValue placeholder="Select habit" />
           </SelectTrigger>
           <SelectContent>
-            {userHabits.map(habit => (
+            {allHabitsForTracking.map(habit => (
               <SelectItem key={habit.id} value={habit.id}>
                 {habit.title}
                 {habit.isRoutine && <span className="ml-2 text-xs text-blue-600">(Routine)</span>}
+                {habit.id.startsWith('side_habit_') && <span className="ml-2 text-xs text-green-600">(Side)</span>}
+                {habit.id.startsWith('negative_habit_') && <span className="ml-2 text-xs text-red-600">(Avoid)</span>}
               </SelectItem>
             ))}
           </SelectContent>
