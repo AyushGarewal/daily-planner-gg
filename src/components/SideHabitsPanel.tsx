@@ -29,7 +29,7 @@ export function SideHabitsPanel() {
         recurrence: 'Daily',
         xpValue: 15,
         category: newHabit.category,
-        taskType: 'habit',
+        taskType: 'normal',
         type: 'habit',
         numericTarget: newHabit.numericTarget,
         unit: newHabit.unit
