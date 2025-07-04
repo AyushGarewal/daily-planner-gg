@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { TaskGamificationApp } from './components/TaskGamificationApp';
@@ -9,15 +9,22 @@ import { NegativeHabitsPanel } from './components/NegativeHabitsPanel';
 import { ProjectManager } from './components/ProjectManager';
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from './components/AppSidebar';
+import { useTasks } from './hooks/useTasks';
 
 function App() {
+  const [activeTab, setActiveTab] = useState('today');
+  const { progress } = useTasks();
+
   return (
     <Router>
       <SidebarProvider>
         <div className="flex min-h-screen w-full">
-          <AppSidebar />
+          <AppSidebar 
+            activeTab={activeTab} 
+            onTabChange={setActiveTab} 
+            progress={progress}
+          />
           <main className="flex-1">
-            {/* Remove global header with Reset All button */}
             <div className="p-6">
               <Routes>
                 <Route path="/" element={<TaskGamificationApp />} />
