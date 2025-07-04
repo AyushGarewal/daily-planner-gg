@@ -13,7 +13,7 @@ interface TaskManagerProps {
 }
 
 export function TaskManager({ showAllTasks = false }: TaskManagerProps) {
-  const { tasks, addTask, toggleTask } = useTasks();
+  const { tasks, addTask, completeTask, uncompleteTask } = useTasks();
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -21,7 +21,7 @@ export function TaskManager({ showAllTasks = false }: TaskManagerProps) {
     ? tasks 
     : tasks.filter(task => {
         const today = new Date();
-        const taskDate = new Date(task.createdAt);
+        const taskDate = new Date(task.dueDate);
         return taskDate.toDateString() === today.toDateString();
       });
 
@@ -29,12 +29,26 @@ export function TaskManager({ showAllTasks = false }: TaskManagerProps) {
     if (newTaskTitle.trim()) {
       addTask({
         title: newTaskTitle,
+        description: '',
+        subtasks: [],
+        dueDate: new Date(),
+        priority: 'Medium',
+        recurrence: 'None',
+        xpValue: 10,
         category: 'General',
-        priority: 'medium',
-        xpValue: 10
+        taskType: 'normal',
+        type: 'task'
       });
       setNewTaskTitle('');
       setShowAddForm(false);
+    }
+  };
+
+  const handleToggleTask = (taskId: string, isCompleted: boolean) => {
+    if (isCompleted) {
+      uncompleteTask(taskId);
+    } else {
+      completeTask(taskId);
     }
   };
 
@@ -93,7 +107,7 @@ export function TaskManager({ showAllTasks = false }: TaskManagerProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleTask(task.id)}
+                      onClick={() => handleToggleTask(task.id, task.completed)}
                       className={`p-1 ${
                         task.completed
                           ? 'text-green-600 hover:text-green-700'
@@ -110,7 +124,7 @@ export function TaskManager({ showAllTasks = false }: TaskManagerProps) {
                       </h4>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {format(new Date(task.createdAt), 'MMM dd, yyyy')}
+                        {format(new Date(task.dueDate), 'MMM dd, yyyy')}
                         <span>•</span>
                         <span className="capitalize">{task.category}</span>
                         <span>•</span>
