@@ -2,200 +2,375 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Target, TrendingUp, Calendar, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Calendar, Star } from 'lucide-react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
+import { WeekdaySelector } from './WeekdaySelector';
+import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
+import { CATEGORIES } from '../types/task';
+import { getDay } from 'date-fns';
 
 export function SideHabitsPanel() {
-  const { tasks, addTask, completeTask, uncompleteTask } = useTasks();
-  const [newHabit, setNewHabit] = useState({
-    title: '',
-    category: 'Health',
-    numericTarget: 1,
-    unit: 'times'
-  });
+  const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('sideHabits', []);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [newHabitName, setNewHabitName] = useState('');
+  const [newHabitCategory, setNewHabitCategory] = useState('');
+  const [newHabitXP, setNewHabitXP] = useState(5);
+  const [newHabitRecurrence, setNewHabitRecurrence] = useState<'None' | 'Daily' | 'Weekly'>('None');
+  const [newHabitWeekDays, setNewHabitWeekDays] = useState<number[]>([]);
+  const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
+  
+  const { categories: customCategories } = useCustomCategories();
+  const { addBonusXP } = useTasks();
+  const today = new Date().toDateString();
 
-  const handleAddHabit = () => {
-    if (newHabit.title.trim()) {
-      console.log('Adding side habit:', newHabit);
-      addTask({
-        title: newHabit.title,
-        description: '',
-        subtasks: [],
-        dueDate: new Date(),
-        priority: 'Medium',
-        recurrence: 'Daily',
-        xpValue: 15,
-        category: newHabit.category,
-        taskType: 'normal',
-        type: 'habit',
-        numericTarget: newHabit.numericTarget,
-        unit: newHabit.unit
-      });
-      setNewHabit({
-        title: '',
-        category: 'Health',
-        numericTarget: 1,
-        unit: 'times'
-      });
-    }
-  };
+  // Combine default and custom categories
+  const allCategories = [...CATEGORIES, ...customCategories];
 
-  const handleToggleCompletion = (taskId: string, isCompleted: boolean) => {
-    if (isCompleted) {
-      uncompleteTask(taskId);
-    } else {
-      completeTask(taskId);
-    }
-  };
-
-  const getCompletionPercentage = (habitTitle: string, target: number) => {
-    const completedInstances = tasks.filter(task => 
-      task.title === habitTitle && 
-      task.type === 'habit' && 
-      task.completed
-    );
+  const addSideHabit = () => {
+    console.log('Adding side habit:', { newHabitName, newHabitCategory });
     
-    if (!completedInstances || !Array.isArray(completedInstances)) {
-      return 0;
+    if (!newHabitName.trim()) {
+      console.log('Habit name is empty');
+      return;
     }
     
-    const completedCount = completedInstances.length;
-    return Math.min((completedCount / target) * 100, 100);
+    if (!newHabitCategory) {
+      console.log('Category not selected');
+      return;
+    }
+
+    const validSubtasks = newHabitSubtasks.filter(st => st.title.trim());
+    
+    const newHabit: SideHabit = {
+      id: `side_habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: newHabitName.trim(),
+      category: newHabitCategory,
+      completedDates: [],
+      recurrence: newHabitRecurrence,
+      weekDays: newHabitRecurrence === 'Weekly' ? newHabitWeekDays : undefined,
+      subtasks: validSubtasks,
+      xpValue: newHabitXP,
+      createdAt: new Date()
+    };
+    
+    console.log('Created new habit:', newHabit);
+    
+    setSideHabits(prev => {
+      const updated = [...prev, newHabit];
+      console.log('Updated side habits:', updated);
+      return updated;
+    });
+    
+    // Reset form
+    setNewHabitName('');
+    setNewHabitCategory('');
+    setNewHabitXP(5);
+    setNewHabitRecurrence('None');
+    setNewHabitWeekDays([]);
+    setNewHabitSubtasks([]);
+    setIsFormOpen(false);
+    
+    console.log('Form reset and closed');
   };
 
-  const uniqueHabits = tasks
-    .filter(task => task.type === 'habit')
-    .reduce((acc, task) => {
-      const existing = acc.find(h => h.title === task.title && h.category === task.category);
-      if (!existing) {
-        acc.push(task);
+  const toggleHabitCompletion = (habitId: string) => {
+    setSideHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const isCompleted = habit.completedDates.includes(today);
+        const updatedHabit = {
+          ...habit,
+          completedDates: isCompleted
+            ? habit.completedDates.filter(date => date !== today)
+            : [...habit.completedDates, today]
+        };
+        
+        // Calculate XP based on subtask completion if applicable
+        if (!isCompleted && habit.xpValue) {
+          let xpToAdd = habit.xpValue;
+          
+          if (habit.subtasks.length > 0) {
+            const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
+            const completionPercentage = completedSubtasks / habit.subtasks.length;
+            xpToAdd = Math.round(habit.xpValue * completionPercentage);
+          }
+          
+          if (xpToAdd > 0) {
+            addBonusXP(xpToAdd);
+          }
+        }
+        
+        return updatedHabit;
       }
-      return acc;
-    }, [] as any[]);
+      return habit;
+    }));
+  };
+
+  const toggleSubtask = (habitId: string, subtaskId: string) => {
+    setSideHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const updatedSubtasks = habit.subtasks.map(subtask =>
+          subtask.id === subtaskId 
+            ? { ...subtask, completed: !subtask.completed }
+            : subtask
+        );
+        return { ...habit, subtasks: updatedSubtasks };
+      }
+      return habit;
+    }));
+  };
+
+  const deleteSideHabit = (habitId: string) => {
+    setSideHabits(prev => prev.filter(habit => habit.id !== habitId));
+  };
+
+  const shouldShowHabitToday = (habit: SideHabit) => {
+    if (habit.recurrence === 'None') return true;
+    if (habit.recurrence === 'Daily') return true;
+    if (habit.recurrence === 'Weekly' && habit.weekDays) {
+      const todayWeekday = getDay(new Date());
+      return habit.weekDays.includes(todayWeekday);
+    }
+    return true;
+  };
+
+  const addNewSubtask = () => {
+    const newSubtask: SideHabitSubtask = {
+      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: '',
+      completed: false
+    };
+    setNewHabitSubtasks(prev => [...prev, newSubtask]);
+  };
+
+  const updateSubtask = (subtaskId: string, title: string) => {
+    setNewHabitSubtasks(prev => prev.map(subtask =>
+      subtask.id === subtaskId ? { ...subtask, title } : subtask
+    ));
+  };
+
+  const removeSubtask = (subtaskId: string) => {
+    setNewHabitSubtasks(prev => prev.filter(subtask => subtask.id !== subtaskId));
+  };
+
+  const getCompletionPercentage = (habit: SideHabit) => {
+    if (habit.subtasks.length === 0) return 100;
+    const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
+    return Math.round((completedSubtasks / habit.subtasks.length) * 100);
+  };
+
+  const todaysHabits = sideHabits.filter(shouldShowHabitToday);
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Side Habits</h2>
-          <p className="text-muted-foreground">Track your daily habits and build consistency</p>
-        </div>
-      </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Side Habits</CardTitle>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Side Habit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add Side Habit</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="habitName">Habit Name</Label>
+                  <Input
+                    id="habitName"
+                    value={newHabitName}
+                    onChange={(e) => setNewHabitName(e.target.value)}
+                    placeholder="Enter habit name..."
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="habitCategory">Category</Label>
+                  <Select value={newHabitCategory} onValueChange={setNewHabitCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCategories.map((category) => (
+                        <SelectItem key={String(category)} value={String(category)}>
+                          {String(category)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Add New Habit
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            placeholder="Habit name (e.g., Drink water, Exercise)"
-            value={newHabit.title}
-            onChange={(e) => setNewHabit(prev => ({ ...prev, title: e.target.value }))}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select 
-              value={newHabit.category} 
-              onValueChange={(value) => setNewHabit(prev => ({ ...prev, category: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Health">Health</SelectItem>
-                <SelectItem value="Fitness">Fitness</SelectItem>
-                <SelectItem value="Learning">Learning</SelectItem>
-                <SelectItem value="Productivity">Productivity</SelectItem>
-                <SelectItem value="Personal">Personal</SelectItem>
-              </SelectContent>
-            </Select>
+                <div>
+                  <Label htmlFor="habitXP">XP Reward</Label>
+                  <Input
+                    id="habitXP"
+                    type="number"
+                    value={newHabitXP}
+                    onChange={(e) => setNewHabitXP(parseInt(e.target.value) || 5)}
+                    min="1"
+                    max="50"
+                  />
+                </div>
 
-            <Input
-              type="number"
-              min="1"
-              placeholder="Target (e.g., 8)"
-              value={newHabit.numericTarget}
-              onChange={(e) => setNewHabit(prev => ({ ...prev, numericTarget: parseInt(e.target.value) || 1 }))}
-            />
+                <div>
+                  <Label htmlFor="recurrence">Recurrence</Label>
+                  <Select value={newHabitRecurrence} onValueChange={(value: 'None' | 'Daily' | 'Weekly') => setNewHabitRecurrence(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="Daily">Daily</SelectItem>
+                      <SelectItem value="Weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <Input
-              placeholder="Unit (e.g., glasses, minutes)"
-              value={newHabit.unit}
-              onChange={(e) => setNewHabit(prev => ({ ...prev, unit: e.target.value }))}
-            />
-          </div>
+                {newHabitRecurrence === 'Weekly' && (
+                  <div>
+                    <Label>Days of the Week</Label>
+                    <WeekdaySelector
+                      selectedDays={newHabitWeekDays}
+                      onChange={setNewHabitWeekDays}
+                    />
+                  </div>
+                )}
 
-          <Button onClick={handleAddHabit} disabled={!newHabit.title.trim()}>
-            Add Habit
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4">
-        {uniqueHabits.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">No habits yet</h3>
-              <p className="text-muted-foreground">Create your first habit to start building consistency</p>
-            </CardContent>
-          </Card>
-        ) : (
-          uniqueHabits.map((habit, index) => {
-            const target = habit.numericTarget || 1;
-            const completionPercentage = getCompletionPercentage(habit.title, target);
-            const completedCount = tasks.filter(task => 
-              task.title === habit.title && 
-              task.type === 'habit' && 
-              task.completed
-            ).length;
-
-            return (
-              <Card key={`${habit.title}-${habit.category}-${index}`}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-0 h-8 w-8"
-                        onClick={() => handleToggleCompletion(habit.id, habit.completed)}
-                      >
-                        <CheckCircle2 
-                          className={`h-6 w-6 ${habit.completed ? 'text-green-500 fill-green-100' : 'text-muted-foreground'}`} 
+                <div>
+                  <Label>Subtasks (Optional)</Label>
+                  <div className="space-y-2">
+                    {newHabitSubtasks.map((subtask) => (
+                      <div key={subtask.id} className="flex items-center gap-2">
+                        <Input
+                          value={subtask.title}
+                          onChange={(e) => updateSubtask(subtask.id, e.target.value)}
+                          placeholder="Subtask title..."
+                          className="flex-1"
                         />
-                      </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSubtask(subtask.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addNewSubtask}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Subtask
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button onClick={addSideHabit} className="flex-1">
+                    Add Habit
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsFormOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Track habits and earn XP without affecting streaks
+        </p>
+      </CardHeader>
+      <CardContent>
+        {todaysHabits.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">No side habits for today.</p>
+            <p className="text-xs">Add habits to track and earn XP.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {todaysHabits.map((habit) => {
+              const isCompleted = habit.completedDates.includes(today);
+              const completionPercentage = getCompletionPercentage(habit);
+              
+              return (
+                <div key={habit.id} className="p-3 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        checked={isCompleted}
+                        onCheckedChange={() => toggleHabitCompletion(habit.id)}
+                      />
                       <div>
-                        <CardTitle className="text-lg">{habit.title}</CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline">{habit.category}</Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {completedCount}/{target} {habit.unit || 'completions'}
-                          </span>
+                        <span className={`${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                          {habit.name}
+                        </span>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>{habit.category}</span>
+                          {habit.recurrence !== 'None' && (
+                            <>
+                              <Calendar className="h-3 w-3" />
+                              <span>{habit.recurrence}</span>
+                            </>
+                          )}
+                          {habit.xpValue && (
+                            <>
+                              <Star className="h-3 w-3" />
+                              <span>+{habit.xpValue} XP</span>
+                            </>
+                          )}
+                          {habit.subtasks.length > 0 && (
+                            <span>({completionPercentage}% complete)</span>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">{Math.round(completionPercentage)}%</div>
-                      <div className="text-sm text-muted-foreground">Complete</div>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteSideHabit(habit.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <Progress value={completionPercentage} className="h-3" />
-                </CardContent>
-              </Card>
-            );
-          })
+                  
+                  {habit.subtasks.length > 0 && (
+                    <div className="ml-6 space-y-2">
+                      {habit.subtasks.map((subtask) => (
+                        <div key={subtask.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={subtask.completed}
+                            onCheckedChange={() => toggleSubtask(habit.id, subtask.id)}
+                          />
+                          <span className={`text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
+                            {subtask.title}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -52,7 +51,6 @@ export function useTasks() {
       ...taskData,
       completed: false,
     };
-    console.log('Adding new task:', newTask);
     setTasks(prev => [...prev, newTask]);
   };
 
@@ -67,122 +65,68 @@ export function useTasks() {
   };
 
   const completeTask = (id: string) => {
-    console.log(`Attempting to complete task: ${id}`);
-    
     setTasks(prev => {
-      const task = prev.find(t => t.id === id);
-      if (!task || task.completed) {
-        console.log('Task not found or already completed');
-        return prev;
-      }
-
-      const isHabit = task.type === 'habit';
-      const isRoutine = task.isRoutine;
-      let xpReward = task.xpValue || 10;
-      let shouldCountForStreak = true;
-      
-      console.log(`Completing task: ${task.title}, Base XP: ${xpReward}, Is habit: ${isHabit}`);
-      
-      // Calculate XP and streak based on subtask completion
-      if (task.subtasks && task.subtasks.length > 0) {
-        const completedSubtasks = task.subtasks.filter(st => st.completed).length;
-        const totalSubtasks = task.subtasks.length;
-        const completionPercentage = completedSubtasks / totalSubtasks;
-        
-        console.log(`Task: ${task.title}, Subtasks: ${completedSubtasks}/${totalSubtasks} (${Math.round(completionPercentage * 100)}%)`);
-        
-        // Award proportional XP based on completion percentage
-        xpReward = Math.round((task.xpValue || 10) * completionPercentage);
-        
-        // Only count for streak if ALL subtasks are completed (100%)
-        shouldCountForStreak = completionPercentage === 1;
-        
-        console.log(`XP awarded: ${xpReward}, Counts for streak: ${shouldCountForStreak}`);
-      }
-      
-      // Apply XP multiplier
-      const finalXP = applyMultiplier(xpReward);
-      
-      console.log(`Final XP for ${task.title}: ${finalXP}, Should count for streak: ${shouldCountForStreak}`);
-      
-      // Update progress stats immediately
-      setProgress(currentProgress => {
-        const newTotalXP = currentProgress.totalXP + finalXP;
-        const newLevel = Math.floor(newTotalXP / 100) + 1;
-        const leveledUp = newLevel > currentProgress.level;
-        
-        if (leveledUp) {
-          setShowLevelUp(newLevel);
+      const updatedTasks = prev.map(task => {
+        if (task.id === id) {
+          const isHabit = task.type === 'habit';
+          const isRoutine = task.isRoutine;
+          let xpReward = task.xpValue || 10;
+          let shouldCountForStreak = true;
+          
+          console.log(`Completing task: ${task.title}`);
+          console.log(`Is routine: ${isRoutine}, Base XP: ${xpReward}`);
+          
+          // Calculate XP and streak based on subtask completion
+          if (task.subtasks && task.subtasks.length > 0) {
+            const completedSubtasks = task.subtasks.filter(st => st.completed).length;
+            const totalSubtasks = task.subtasks.length;
+            const completionPercentage = completedSubtasks / totalSubtasks;
+            
+            console.log(`Task: ${task.title}, Subtasks: ${completedSubtasks}/${totalSubtasks} (${Math.round(completionPercentage * 100)}%)`);
+            
+            // Award proportional XP based on completion percentage
+            xpReward = Math.round((task.xpValue || 10) * completionPercentage);
+            
+            // Only count for streak if ALL subtasks are completed (100%)
+            shouldCountForStreak = completionPercentage === 1;
+            
+            console.log(`XP awarded: ${xpReward}, Counts for streak: ${shouldCountForStreak}`);
+          }
+          
+          // Apply XP multiplier
+          const finalXP = applyMultiplier(xpReward);
+          
+          console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}, Should count for streak: ${shouldCountForStreak}`);
+          
+          // Update progress stats - ALWAYS count routine tasks for XP and completion
+          setProgress(p => {
+            const newProgress = {
+              ...p,
+              totalXP: p.totalXP + finalXP,
+              tasksCompleted: p.tasksCompleted + 1,
+              habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
+            };
+            
+            // Only update streak if task qualifies for streak counting
+            if (shouldCountForStreak) {
+              newProgress.currentStreak = p.currentStreak + 1;
+              newProgress.longestStreak = (p.currentStreak + 1) > p.longestStreak 
+                ? p.currentStreak + 1 
+                : p.longestStreak;
+              newProgress.maxStreak = (p.currentStreak + 1) > p.maxStreak 
+                ? p.currentStreak + 1 
+                : p.maxStreak;
+            }
+            
+            console.log(`Progress updated:`, newProgress);
+            return newProgress;
+          });
+          
+          return { ...task, completed: true, completedAt: new Date() };
         }
-        
-        const newProgress = {
-          ...currentProgress,
-          totalXP: newTotalXP,
-          level: newLevel,
-          tasksCompleted: currentProgress.tasksCompleted + 1,
-          habitsCompleted: isHabit ? currentProgress.habitsCompleted + 1 : currentProgress.habitsCompleted,
-        };
-        
-        // Only update streak if task qualifies for streak counting
-        if (shouldCountForStreak) {
-          newProgress.currentStreak = currentProgress.currentStreak + 1;
-          newProgress.longestStreak = (currentProgress.currentStreak + 1) > currentProgress.longestStreak 
-            ? currentProgress.currentStreak + 1 
-            : currentProgress.longestStreak;
-          newProgress.maxStreak = (currentProgress.currentStreak + 1) > currentProgress.maxStreak 
-            ? currentProgress.currentStreak + 1 
-            : currentProgress.maxStreak;
-        }
-        
-        console.log(`Progress updated:`, newProgress);
-        return newProgress;
+        return task;
       });
-      
-      return prev.map(task => 
-        task.id === id 
-          ? { ...task, completed: true, completedAt: new Date() }
-          : task
-      );
-    });
-  };
-
-  const uncompleteTask = (id: string) => {
-    console.log(`Attempting to uncomplete task: ${id}`);
-    
-    setTasks(prev => {
-      const task = prev.find(t => t.id === id);
-      if (!task || !task.completed) {
-        console.log('Task not found or not completed');
-        return prev;
-      }
-
-      // Calculate XP to deduct
-      let xpToDeduct = task.xpValue || 10;
-      if (task.subtasks && task.subtasks.length > 0) {
-        const completedSubtasks = task.subtasks.filter(st => st.completed).length;
-        const completionPercentage = completedSubtasks / task.subtasks.length;
-        xpToDeduct = Math.round((task.xpValue || 10) * completionPercentage);
-      }
-      
-      const finalXPDeduction = applyMultiplier(xpToDeduct);
-      console.log(`Deducting ${finalXPDeduction} XP for uncompleting task: ${task.title}`);
-
-      // Update progress
-      setProgress(currentProgress => {
-        const newTotalXP = Math.max(0, currentProgress.totalXP - finalXPDeduction);
-        const newLevel = Math.floor(newTotalXP / 100) + 1;
-        
-        return {
-          ...currentProgress,
-          totalXP: newTotalXP,
-          level: newLevel,
-          tasksCompleted: Math.max(0, currentProgress.tasksCompleted - 1),
-          habitsCompleted: task.type === 'habit' ? Math.max(0, currentProgress.habitsCompleted - 1) : currentProgress.habitsCompleted,
-          currentStreak: Math.max(0, currentProgress.currentStreak - 1),
-        };
-      });
-
-      return prev.map(t => t.id === id ? { ...t, completed: false, completedAt: undefined } : t);
+      return updatedTasks;
     });
   };
 
@@ -344,22 +288,19 @@ export function useTasks() {
   };
 
   const addBonusXP = (amount: number) => {
-    console.log(`Adding bonus XP: ${amount}`);
     // Apply multiplier to bonus XP
     const multipliedAmount = applyMultiplier(amount);
-    setBonusXP(prev => prev + multipliedAmount); 
+    setBonusXP(prev => prev + multipliedAmount);
     
     // Update progress stats
     setProgress(prev => {
-      const newTotalXP = Math.max(0, prev.totalXP + multipliedAmount);
+      const newTotalXP = prev.totalXP + multipliedAmount;
       const newLevel = Math.floor(newTotalXP / 100) + 1;
       const leveledUp = newLevel > prev.level;
       
       if (leveledUp) {
         setShowLevelUp(newLevel);
       }
-      
-      console.log(`Bonus XP added: ${multipliedAmount}, New total XP: ${newTotalXP}`);
       
       return {
         ...prev,
@@ -379,13 +320,11 @@ export function useTasks() {
     updateTask,
     deleteTask,
     completeTask,
-    uncompleteTask,
     toggleSubtask,
     addBonusXP,
     canUseDaily,
     markDailyUsed,
     setShowLevelUp,
-    setProgress,
     getTodaysTasks,
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,

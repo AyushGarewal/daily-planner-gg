@@ -1,3 +1,4 @@
+
 export interface Task {
   id: string;
   title: string;
@@ -20,7 +21,6 @@ export interface Task {
   goalId?: string; // Link to long-term goal
   customCategory?: string; // Custom category name
   numericTarget?: number; // For habits - target number of completions
-  unit?: string; // For habits - unit of measurement (e.g., "times", "glasses", "minutes")
 }
 
 export interface Subtask {
