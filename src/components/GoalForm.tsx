@@ -8,7 +8,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, Target, Link as LinkIcon, Trophy, Plus } from 'lucide-react';
+import { CalendarIcon, Target, Link as LinkIcon, Trophy, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
@@ -19,6 +19,14 @@ interface GoalFormProps {
   initialGoal?: any;
 }
 
+interface Milestone {
+  id: string;
+  title: string;
+  percentageTarget: number;
+  dueDate?: Date;
+  isCompleted: boolean;
+}
+
 export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
   const { addGoal, updateGoal } = useGoals();
   const { tasks } = useTasks();
@@ -26,7 +34,6 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
   const [title, setTitle] = useState(initialGoal?.title || '');
   const [description, setDescription] = useState(initialGoal?.description || '');
   const [category, setCategory] = useState(initialGoal?.category || 'Personal');
-  const [priority, setPriority] = useState(initialGoal?.priority || 'Medium');
   const [startDate, setStartDate] = useState<Date>(
     initialGoal?.startDate ? new Date(initialGoal.startDate) : new Date()
   );
@@ -34,11 +41,15 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
     initialGoal?.targetDate ? new Date(initialGoal.targetDate) : undefined
   );
   
-  // Numeric target fields
-  const [hasNumericTarget, setHasNumericTarget] = useState(initialGoal?.hasNumericTarget || false);
-  const [numericTarget, setNumericTarget] = useState(initialGoal?.numericTarget || 100);
-  const [targetUnit, setTargetUnit] = useState(initialGoal?.targetUnit || 'completions');
-  const [linkedHabitId, setLinkedHabitId] = useState(initialGoal?.linkedHabitId || '');
+  // Milestones state
+  const [milestones, setMilestones] = useState<Milestone[]>(
+    initialGoal?.milestones || [
+      { id: '1', title: 'Quarter Progress', percentageTarget: 25, isCompleted: false },
+      { id: '2', title: 'Halfway Point', percentageTarget: 50, isCompleted: false },
+      { id: '3', title: 'Three Quarters', percentageTarget: 75, isCompleted: false },
+      { id: '4', title: 'Goal Complete', percentageTarget: 100, isCompleted: false }
+    ]
+  );
   
   // Task/habit linking
   const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>(initialGoal?.linkedTaskIds || []);
@@ -63,16 +74,14 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
       title: title.trim(),
       description: description.trim(),
       category,
-      priority,
       startDate,
       targetDate,
-      hasNumericTarget,
-      numericTarget: hasNumericTarget ? numericTarget : undefined,
-      targetUnit: hasNumericTarget ? targetUnit : undefined,
-      linkedHabitId: hasNumericTarget && linkedHabitId ? linkedHabitId : undefined,
       linkedTaskIds: linkedTaskIds.length > 0 ? linkedTaskIds : undefined,
       linkedHabitIds: linkedHabitIds.length > 0 ? linkedHabitIds : undefined,
-      currentProgress: 0,
+      milestones: milestones.map(m => ({
+        ...m,
+        createdAt: new Date()
+      }))
     };
 
     if (initialGoal) {
@@ -98,6 +107,24 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
         ? prev.filter(id => id !== habitId)
         : [...prev, habitId]
     );
+  };
+
+  const addMilestone = () => {
+    const newMilestone: Milestone = {
+      id: Date.now().toString(),
+      title: 'New Milestone',
+      percentageTarget: 50,
+      isCompleted: false
+    };
+    setMilestones(prev => [...prev, newMilestone]);
+  };
+
+  const updateMilestone = (id: string, updates: Partial<Milestone>) => {
+    setMilestones(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+  };
+
+  const deleteMilestone = (id: string) => {
+    setMilestones(prev => prev.filter(m => m.id !== id));
   };
 
   return (
@@ -142,48 +169,6 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Priority</label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Start Date</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => date && setStartDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium mb-1">Target Date (Optional)</label>
             <Popover>
               <PopoverTrigger asChild>
@@ -210,79 +195,114 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
           </div>
         </div>
 
-        {/* Numeric Target Section */}
+        {/* Milestones Section */}
         <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="numeric-target"
-              checked={hasNumericTarget}
-              onCheckedChange={setHasNumericTarget}
-            />
-            <label htmlFor="numeric-target" className="text-sm font-medium flex items-center gap-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
               <Trophy className="h-4 w-4" />
-              Set Numeric Target
-            </label>
+              Milestones
+            </h3>
+            <Button type="button" onClick={addMilestone} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Milestone
+            </Button>
           </div>
 
-          {hasNumericTarget && (
-            <div className="space-y-4 ml-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Target Number</label>
+          <div className="space-y-3">
+            {milestones.map((milestone) => (
+              <div key={milestone.id} className="flex items-center gap-2 p-3 bg-background rounded border">
+                <div className="flex-1 grid grid-cols-3 gap-2">
                   <Input
-                    type="number"
-                    value={numericTarget}
-                    onChange={(e) => setNumericTarget(parseInt(e.target.value) || 0)}
-                    min="1"
-                    placeholder="100"
+                    placeholder="Milestone name"
+                    value={milestone.title}
+                    onChange={(e) => updateMilestone(milestone.id, { title: e.target.value })}
                   />
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={milestone.percentageTarget}
+                      onChange={(e) => updateMilestone(milestone.id, { percentageTarget: parseInt(e.target.value) || 0 })}
+                    />
+                    <span className="text-sm">%</span>
+                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !milestone.dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-1 h-3 w-3" />
+                        {milestone.dueDate ? format(milestone.dueDate, "MMM dd") : "Due date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={milestone.dueDate}
+                        onSelect={(date) => updateMilestone(milestone.id, { dueDate: date })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Unit</label>
-                  <Input
-                    value={targetUnit}
-                    onChange={(e) => setTargetUnit(e.target.value)}
-                    placeholder="completions, sessions, etc."
-                  />
-                </div>
+                <Button
+                  type="button"
+                  onClick={() => deleteMilestone(milestone.id)}
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Link to Habit (Optional)</label>
-                <Select value={linkedHabitId} onValueChange={setLinkedHabitId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a habit to track automatically" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No habit link</SelectItem>
-                    {availableHabits.map((habit) => (
-                      <SelectItem key={habit.id} value={habit.id || 'none'}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{habit.title}</span>
-                          <Badge variant="outline" className="text-xs ml-2">
-                            {habit.category}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {linkedHabitId && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Progress will automatically update when this habit is completed
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
 
         {/* Task/Habit Linking Section */}
         <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <LinkIcon className="h-4 w-4" />
-            Link Tasks & Habits
+            Link Habits for Progress Tracking
           </h3>
+          <p className="text-xs text-muted-foreground">
+            Link habits with numeric targets to automatically track goal progress
+          </p>
+
+          {availableHabits.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Link Habits</label>
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {availableHabits.map((habit) => (
+                  <div key={habit.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`habit-${habit.id}`}
+                      checked={linkedHabitIds.includes(habit.id)}
+                      onCheckedChange={() => toggleHabitLink(habit.id)}
+                    />
+                    <label htmlFor={`habit-${habit.id}`} className="text-sm flex-1 cursor-pointer">
+                      {habit.title}
+                      {habit.numericTarget && (
+                        <span className="text-muted-foreground ml-1">
+                          (Target: {habit.numericTarget} {habit.unit || 'times'})
+                        </span>
+                      )}
+                    </label>
+                    <Badge variant="outline" className="text-xs">
+                      {habit.category}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {availableTasks.length > 0 && (
             <div>
@@ -300,29 +320,6 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
                     </label>
                     <Badge variant="outline" className="text-xs">
                       {task.category}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {availableHabits.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium mb-2">Link Habits</label>
-              <div className="max-h-32 overflow-y-auto space-y-1">
-                {availableHabits.map((habit) => (
-                  <div key={habit.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`habit-${habit.id}`}
-                      checked={linkedHabitIds.includes(habit.id)}
-                      onCheckedChange={() => toggleHabitLink(habit.id)}
-                    />
-                    <label htmlFor={`habit-${habit.id}`} className="text-sm flex-1 cursor-pointer">
-                      {habit.title}
-                    </label>
-                    <Badge variant="outline" className="text-xs">
-                      {habit.category}
                     </Badge>
                   </div>
                 ))}

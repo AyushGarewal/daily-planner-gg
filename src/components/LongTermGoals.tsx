@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, Calendar, TrendingUp, Trophy, Link, CheckCircle } from 'lucide-react';
+import { Plus, Target, Calendar, TrendingUp, Trophy, Link, CheckCircle, Edit } from 'lucide-react';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
 import { GoalForm } from './GoalForm';
@@ -26,6 +26,8 @@ export function LongTermGoals() {
       case 'Personal': return 'bg-green-500';
       case 'Health': return 'bg-red-500';
       case 'Education': return 'bg-purple-500';
+      case 'Finance': return 'bg-yellow-500';
+      case 'Relationships': return 'bg-pink-500';
       default: return 'bg-gray-500';
     }
   };
@@ -62,15 +64,11 @@ export function LongTermGoals() {
       ).length;
       
       totalProgress += Math.min(completedCount, habitTarget);
-      
-      console.log(`Habit ${habit.title}: ${completedCount}/${habitTarget} completed`);
     });
     
     if (totalTarget === 0) return null;
     
     const percentage = Math.round((totalProgress / totalTarget) * 100);
-    
-    console.log(`Total progress: ${totalProgress}/${totalTarget} = ${percentage}%`);
     
     return {
       current: totalProgress,
@@ -87,8 +85,17 @@ export function LongTermGoals() {
     setSelectedGoal(goal);
   };
 
+  const getMilestoneMarkers = (milestones: any[], progress: number) => {
+    if (!milestones || milestones.length === 0) return [];
+    
+    return milestones.map(milestone => ({
+      ...milestone,
+      isReached: progress >= milestone.percentageTarget
+    }));
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">Long-Term Goals</h2>
@@ -133,6 +140,7 @@ export function LongTermGoals() {
             
             // Use linked habits progress as the main progress indicator
             const mainProgress = linkedHabitsProgress || progress;
+            const milestoneMarkers = getMilestoneMarkers(goal.milestones || [], mainProgress.percentage);
             
             return (
               <Card key={goal.id} className="w-full">
@@ -165,7 +173,7 @@ export function LongTermGoals() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Main Progress Indicator */}
+                  {/* Main Progress Indicator with Milestones */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
@@ -175,7 +183,31 @@ export function LongTermGoals() {
                         {mainProgress.percentage}%
                       </span>
                     </div>
-                    <Progress value={mainProgress.percentage} className="h-3" />
+                    
+                    {/* Progress Bar with Milestone Markers */}
+                    <div className="relative">
+                      <Progress value={mainProgress.percentage} className="h-4" />
+                      {milestoneMarkers.length > 0 && (
+                        <div className="absolute top-0 left-0 w-full h-4 flex items-center">
+                          {milestoneMarkers.map((milestone, index) => (
+                            <div
+                              key={milestone.id || index}
+                              className="absolute flex flex-col items-center"
+                              style={{ left: `${milestone.percentageTarget}%`, transform: 'translateX(-50%)' }}
+                            >
+                              <div
+                                className={`w-2 h-2 rounded-full border-2 ${
+                                  milestone.isReached 
+                                    ? 'bg-green-500 border-green-500' 
+                                    : 'bg-white border-gray-400'
+                                }`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
                     {linkedHabitsProgress && (
                       <div className="text-xs text-muted-foreground">
                         {linkedHabitsProgress.current} / {linkedHabitsProgress.target} habit completions
@@ -188,24 +220,30 @@ export function LongTermGoals() {
                     )}
                   </div>
                   
-                  {/* Milestones */}
+                  {/* Milestones List */}
                   {goal.milestones && goal.milestones.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Milestones</h4>
-                      <div className="space-y-1">
-                        {goal.milestones.map((milestone, index) => (
-                          <div key={milestone.id} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className={`h-4 w-4 ${milestone.isCompleted ? 'text-green-500' : 'text-muted-foreground'}`} />
-                            <span className={milestone.isCompleted ? 'line-through text-muted-foreground' : ''}>
-                              {milestone.title} ({milestone.percentageTarget}%)
-                            </span>
-                            {milestone.dueDate && (
-                              <span className="text-xs text-muted-foreground">
-                                Due {format(new Date(milestone.dueDate), 'MMM dd')}
-                              </span>
-                            )}
-                          </div>
-                        ))}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {goal.milestones.map((milestone, index) => {
+                          const isReached = mainProgress.percentage >= milestone.percentageTarget;
+                          return (
+                            <div key={milestone.id || index} className="flex items-center gap-2 text-sm p-2 rounded bg-muted/50">
+                              <CheckCircle className={`h-4 w-4 ${isReached ? 'text-green-500' : 'text-muted-foreground'}`} />
+                              <div className="flex-1">
+                                <span className={isReached ? 'line-through text-muted-foreground' : ''}>
+                                  {milestone.title}
+                                </span>
+                                <div className="text-xs text-muted-foreground">
+                                  {milestone.percentageTarget}%
+                                  {milestone.dueDate && (
+                                    <span> • Due {format(new Date(milestone.dueDate), 'MMM dd')}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -223,15 +261,6 @@ export function LongTermGoals() {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Task Integration */}
-                  <div className="border-t pt-4">
-                    <ProjectTaskIntegration
-                      projectId={goal.id}
-                      projectName={goal.title}
-                      projectColor={getCategoryColor(goal.category).replace('bg-', '')}
-                    />
-                  </div>
                   
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
@@ -251,7 +280,8 @@ export function LongTermGoals() {
                     onClick={() => handleGoalClick(goal)}
                     className="w-full"
                   >
-                    View Details
+                    <Edit className="h-4 w-4 mr-2" />
+                    View & Edit Details
                   </Button>
                 </CardContent>
               </Card>
