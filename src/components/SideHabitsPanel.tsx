@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Target, TrendingUp, Calendar } from 'lucide-react';
+import { Plus, Target, TrendingUp, Calendar, CheckCircle2 } from 'lucide-react';
 import { useTasks } from '../hooks/useTasks';
 
 export function SideHabitsPanel() {
-  const { tasks, addTask } = useTasks();
+  const { tasks, addTask, completeTask, uncompleteTask } = useTasks();
   const [newHabit, setNewHabit] = useState({
     title: '',
     category: 'Health',
@@ -20,6 +20,7 @@ export function SideHabitsPanel() {
 
   const handleAddHabit = () => {
     if (newHabit.title.trim()) {
+      console.log('Adding side habit:', newHabit);
       addTask({
         title: newHabit.title,
         description: '',
@@ -43,6 +44,14 @@ export function SideHabitsPanel() {
     }
   };
 
+  const handleToggleCompletion = (taskId: string, isCompleted: boolean) => {
+    if (isCompleted) {
+      uncompleteTask(taskId);
+    } else {
+      completeTask(taskId);
+    }
+  };
+
   const getCompletionPercentage = (habitTitle: string, target: number) => {
     const completedInstances = tasks.filter(task => 
       task.title === habitTitle && 
@@ -50,7 +59,6 @@ export function SideHabitsPanel() {
       task.completed
     );
     
-    // Safety check to prevent undefined length error
     if (!completedInstances || !Array.isArray(completedInstances)) {
       return 0;
     }
@@ -70,7 +78,7 @@ export function SideHabitsPanel() {
     }, [] as any[]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Side Habits</h2>
@@ -152,14 +160,26 @@ export function SideHabitsPanel() {
             return (
               <Card key={`${habit.title}-${habit.category}-${index}`}>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{habit.title}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">{habit.category}</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {completedCount}/{target} {habit.unit || 'completions'}
-                        </span>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-0 h-8 w-8"
+                        onClick={() => handleToggleCompletion(habit.id, habit.completed)}
+                      >
+                        <CheckCircle2 
+                          className={`h-6 w-6 ${habit.completed ? 'text-green-500 fill-green-100' : 'text-muted-foreground'}`} 
+                        />
+                      </Button>
+                      <div>
+                        <CardTitle className="text-lg">{habit.title}</CardTitle>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline">{habit.category}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {completedCount}/{target} {habit.unit || 'completions'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">

@@ -66,6 +66,9 @@ function App() {
             progress={progress}
           />
           <main className="flex-1">
+            <div className="p-2">
+              <SidebarTrigger />
+            </div>
             {renderContent()}
           </main>
         </div>
