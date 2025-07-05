@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { useXPMultiplier } from './useXPMultiplier';
+import { addXPTransaction } from '../components/XPBar';
 
 interface Progress {
   totalXP: number;
@@ -44,6 +46,36 @@ export function useTasks() {
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   
   const { applyMultiplier } = useXPMultiplier();
+
+  // Listen for undo events
+  useEffect(() => {
+    const handleXPUndo = (event: CustomEvent) => {
+      const { type, itemId, xpChange } = event.detail;
+      
+      if (type === 'task' || type === 'habit') {
+        // Find and update the task/habit
+        setTasks(prev => prev.map(task => {
+          if (task.id === itemId) {
+            return { ...task, completed: false, completedAt: undefined };
+          }
+          return task;
+        }));
+        
+        // Reverse XP and progress changes
+        setProgress(prev => ({
+          ...prev,
+          totalXP: Math.max(0, prev.totalXP - xpChange),
+          level: Math.floor(Math.max(0, prev.totalXP - xpChange) / 100) + 1,
+          tasksCompleted: Math.max(0, prev.tasksCompleted - 1),
+          habitsCompleted: type === 'habit' ? Math.max(0, prev.habitsCompleted - 1) : prev.habitsCompleted,
+          currentStreak: Math.max(0, prev.currentStreak - 1)
+        }));
+      }
+    };
+
+    window.addEventListener('xp-undo', handleXPUndo as EventListener);
+    return () => window.removeEventListener('xp-undo', handleXPUndo as EventListener);
+  }, [setTasks, setProgress]);
 
   const addTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     const newTask: Task = {
@@ -95,6 +127,14 @@ export function useTasks() {
           
           // Apply XP multiplier
           const finalXP = applyMultiplier(xpReward);
+          
+          // Add XP transaction for undo functionality
+          addXPTransaction(
+            isHabit ? 'habit' : 'task',
+            task.id,
+            task.title,
+            finalXP
+          );
           
           console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}, Should count for streak: ${shouldCountForStreak}`);
           
@@ -290,7 +330,10 @@ export function useTasks() {
   const addBonusXP = (amount: number) => {
     // Apply multiplier to bonus XP
     const multipliedAmount = applyMultiplier(amount);
-    setBonusXP(prev => prev + multipliedAmount); 
+    setBonusXP(prev => prev + multipliedAmount);
+    
+    // Add XP transaction
+    addXPTransaction('bonus', 'bonus', 'Bonus XP', multipliedAmount);
     
     // Update progress stats
     setProgress(prev => {

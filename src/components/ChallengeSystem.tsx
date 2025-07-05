@@ -16,6 +16,7 @@ import { useTasks } from '../hooks/useTasks';
 import { useXPSystem } from '../hooks/useXPSystem';
 import { Task } from '../types/task';
 import { SideHabit, NegativeHabit } from '../types/sideHabits';
+import { addXPTransaction } from './XPBar';
 
 interface Challenge {
   id: string;
@@ -72,13 +73,12 @@ const CHALLENGE_TYPES = [
 
 export function ChallengeSystem() {
   const [challenges, setChallenges] = useLocalStorage<Challenge[]>('challenges-system', []);
-  const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('side-habits', []);
-  const [negativeHabits, setNegativeHabits] = useLocalStorage<NegativeHabit[]>('negative-habits', []);
+  const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('sideHabits', []);
+  const [negativeHabits, setNegativeHabits] = useLocalStorage<NegativeHabit[]>('negativeHabits', []);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedHabits, setSelectedHabits] = useState<string[]>([]);
   const [selectedHabitTypes, setSelectedHabitTypes] = useState<('normal' | 'side' | 'negative')[]>([]);
-  const { tasks } = useTasks();
-  const { awardXP } = useXPSystem();
+  const { tasks, progress, setProgress } = useTasks();
 
   const [challengeForm, setChallengeForm] = useState({
     title: '',
@@ -140,6 +140,10 @@ export function ChallengeSystem() {
                 totalCompletions += (habit as SideHabit).completedDates.length;
               } else if (habit.habitType === 'negative') {
                 totalCompletions += (habit as NegativeHabit).avoidedDates.length;
+              } else if (habit.habitType === 'normal') {
+                // Count completed normal habits
+                const normalHabit = tasks.find(t => t.id === habit.id);
+                if (normalHabit?.completed) totalCompletions += 1;
               }
             });
             newProgress = Math.min(challenge.targetValue, totalCompletions);
@@ -173,6 +177,9 @@ export function ChallengeSystem() {
                   return (habit as SideHabit).completedDates.includes(dateStr);
                 } else if (habit.habitType === 'negative') {
                   return (habit as NegativeHabit).avoidedDates.includes(dateStr);
+                } else if (habit.habitType === 'normal') {
+                  const normalHabit = tasks.find(t => t.id === habit.id);
+                  return normalHabit?.completed && new Date(normalHabit.completedAt || '').toDateString() === dateStr;
                 }
                 return false;
               }).length;
@@ -203,6 +210,9 @@ export function ChallengeSystem() {
                   return (habit as SideHabit).completedDates.includes(dateStr);
                 } else if (habit.habitType === 'negative') {
                   return (habit as NegativeHabit).avoidedDates.includes(dateStr);
+                } else if (habit.habitType === 'normal') {
+                  const normalHabit = tasks.find(t => t.id === habit.id);
+                  return normalHabit?.completed && new Date(normalHabit.completedAt || '').toDateString() === dateStr;
                 }
                 return false;
               });
@@ -215,6 +225,23 @@ export function ChallengeSystem() {
             newProgress = comboDays;
             break;
           }
+          
+          case 'milestone': {
+            // For milestone challenges, sum up numeric values
+            let totalValue = 0;
+            linkedHabits.forEach(habit => {
+              if (habit.habitType === 'side') {
+                totalValue += (habit as SideHabit).completedDates.length * ((habit as SideHabit).xpValue || 1);
+              } else if (habit.habitType === 'normal') {
+                const normalHabit = tasks.find(t => t.id === habit.id);
+                if (normalHabit?.completed) {
+                  totalValue += normalHabit.xpValue || 1;
+                }
+              }
+            });
+            newProgress = Math.min(challenge.targetValue, totalValue);
+            break;
+          }
         }
         
         // Check if challenge is completed
@@ -222,7 +249,17 @@ export function ChallengeSystem() {
         
         if (isCompleted && !challenge.isCompleted) {
           // Award XP and badge
-          awardXP('bonus', challenge.id, challenge.xpReward, `Completed challenge: ${challenge.title}`);
+          console.log(`Challenge completed: ${challenge.title}, awarding ${challenge.xpReward} XP`);
+          
+          // Add XP transaction for challenge completion
+          addXPTransaction('bonus', challenge.id, `Challenge: ${challenge.title}`, challenge.xpReward);
+          
+          // Update progress
+          setProgress(prev => ({
+            ...prev,
+            totalXP: prev.totalXP + challenge.xpReward,
+            level: Math.floor((prev.totalXP + challenge.xpReward) / 100) + 1
+          }));
         }
         
         return {
@@ -235,7 +272,7 @@ export function ChallengeSystem() {
     };
     
     updateChallengeProgress();
-  }, [tasks, sideHabits, negativeHabits, allHabits, awardXP]);
+  }, [tasks, sideHabits, negativeHabits, allHabits, setProgress]);
 
   const handleCreateChallenge = () => {
     if (!challengeForm.title.trim() || selectedHabits.length === 0) return;
@@ -337,7 +374,7 @@ export function ChallengeSystem() {
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Create Challenge
+              Create New Challenge
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

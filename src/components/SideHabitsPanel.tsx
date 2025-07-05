@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +16,7 @@ import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
+import { addXPTransaction } from './XPBar';
 
 export function SideHabitsPanel() {
   const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('sideHabits', []);
@@ -33,6 +34,36 @@ export function SideHabitsPanel() {
 
   // Combine default and custom categories
   const allCategories = [...CATEGORIES, ...customCategories];
+
+  // Listen for undo events
+  useEffect(() => {
+    const handleXPUndo = (event: CustomEvent) => {
+      const { type, itemId, xpChange } = event.detail;
+      
+      if (type === 'side-habit') {
+        // Find and update the side habit
+        setSideHabits(prev => prev.map(habit => {
+          if (habit.id === itemId) {
+            return {
+              ...habit,
+              completedDates: habit.completedDates.filter(date => date !== today)
+            };
+          }
+          return habit;
+        }));
+        
+        // Reverse XP changes  
+        setProgress(prev => ({
+          ...prev,
+          totalXP: Math.max(0, prev.totalXP - xpChange),
+          level: Math.floor(Math.max(0, prev.totalXP - xpChange) / 100) + 1
+        }));
+      }
+    };
+
+    window.addEventListener('xp-undo', handleXPUndo as EventListener);
+    return () => window.removeEventListener('xp-undo', handleXPUndo as EventListener);
+  }, [setSideHabits, setProgress, today]);
 
   const addSideHabit = () => {
     console.log('Adding side habit:', { newHabitName, newHabitCategory });
@@ -115,6 +146,10 @@ export function SideHabitsPanel() {
           } else {
             // Complete habit - add XP
             console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
+            
+            // Add XP transaction for undo functionality
+            addXPTransaction('side-habit', habit.id, habit.name, xpToAdd);
+            
             addBonusXP(xpToAdd);
             
             setProgress(prevProgress => ({
