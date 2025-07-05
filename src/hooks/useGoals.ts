@@ -97,9 +97,9 @@ export function useGoals() {
     const completedSubtasks = goalSubtasks.filter(s => s.isCompleted).length;
     const percentage = totalSubtasks > 0 ? Math.round((completedSubtasks / totalSubtasks) * 100) : 0;
 
-    // Calculate linked habits progress
-    let linkedHabitsProgress = undefined;
-    if (goal?.linkedHabitIds && goal.linkedHabitIds.length > 0) {
+    // Calculate habit progress using new dual system
+    let habitProgress = undefined;
+    if (goal?.linkedHabitIds && goal.linkedHabitIds.length > 0 && goal.habitTargets) {
       try {
         const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
         const linkedHabits = tasks.filter((task: any) => 
@@ -111,7 +111,7 @@ export function useGoals() {
           let currentProgress = 0;
           
           linkedHabits.forEach((habit: any) => {
-            const habitTarget = habit.numericTarget || 1;
+            const habitTarget = goal.habitTargets![habit.id] || 1;
             totalTarget += habitTarget;
             
             const completedCount = tasks.filter((t: any) => 
@@ -123,7 +123,7 @@ export function useGoals() {
           });
           
           if (totalTarget > 0) {
-            linkedHabitsProgress = {
+            habitProgress = {
               current: currentProgress,
               target: totalTarget,
               percentage: Math.round((currentProgress / totalTarget) * 100)
@@ -131,8 +131,21 @@ export function useGoals() {
           }
         }
       } catch (error) {
-        console.error('Error calculating linked habits progress:', error);
+        console.error('Error calculating habit progress:', error);
       }
+    }
+
+    // Calculate milestone progress using goal's internal milestones
+    let milestoneProgress = undefined;
+    if (goal?.milestones && goal.milestones.length > 0) {
+      const completedMilestones = goal.milestones.filter(m => m.isCompleted).length;
+      const totalMilestones = goal.milestones.length;
+      
+      milestoneProgress = {
+        completedMilestones,
+        totalMilestones,
+        percentage: totalMilestones > 0 ? Math.round((completedMilestones / totalMilestones) * 100) : 0
+      };
     }
 
     return {
@@ -140,8 +153,30 @@ export function useGoals() {
       totalSubtasks,
       completedSubtasks,
       percentage,
-      linkedHabitsProgress
+      habitProgress,
+      milestoneProgress
     };
+  };
+
+  const toggleGoalMilestone = (goalId: string, milestoneId: string) => {
+    setGoals(prev => prev.map(goal => {
+      if (goal.id === goalId) {
+        return {
+          ...goal,
+          milestones: goal.milestones.map(milestone => 
+            milestone.id === milestoneId 
+              ? { 
+                  ...milestone, 
+                  isCompleted: !milestone.isCompleted,
+                  completedAt: !milestone.isCompleted ? new Date() : undefined
+                }
+              : milestone
+          ),
+          updatedAt: new Date()
+        };
+      }
+      return goal;
+    }));
   };
 
   const getMilestonesForGoal = (goalId: string) => {
@@ -169,6 +204,7 @@ export function useGoals() {
     addSubtask,
     updateSubtask,
     getGoalProgress,
+    toggleGoalMilestone,
     getMilestonesForGoal,
     getSubtasksForMilestone,
     getJournalEntriesForGoal

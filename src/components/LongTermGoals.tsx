@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, Calendar, TrendingUp, Trophy, Link, CheckCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Target, Calendar, TrendingUp, Trophy, Link, CheckCircle, Zap, Flag } from 'lucide-react';
 import { useGoals } from '../hooks/useGoals';
 import { useTasks } from '../hooks/useTasks';
 import { GoalForm } from './GoalForm';
@@ -14,7 +15,7 @@ import { Goal } from '../types/goals';
 import { format } from 'date-fns';
 
 export function LongTermGoals() {
-  const { goals, getGoalProgress, updateGoal } = useGoals();
+  const { goals, getGoalProgress, updateGoal, toggleGoalMilestone } = useGoals();
   const { tasks } = useTasks();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
@@ -29,53 +30,27 @@ export function LongTermGoals() {
     }
   };
 
-  const calculateLinkedHabitsProgress = (goal: Goal) => {
-    if (!goal.linkedHabitIds || goal.linkedHabitIds.length === 0) return null;
+  const getHabitCompletionData = (goal: Goal) => {
+    if (!goal.linkedHabitIds || !goal.habitTargets) return [];
     
-    console.log(`Calculating progress for goal: ${goal.title}`);
-    console.log(`Linked habit IDs:`, goal.linkedHabitIds);
-    
-    // Get all linked habits
-    const linkedHabits = tasks.filter(task => 
-      goal.linkedHabitIds!.includes(task.id) && task.type === 'habit'
-    );
-    
-    console.log(`Found ${linkedHabits.length} linked habits:`, linkedHabits.map(h => h.title));
-    
-    if (linkedHabits.length === 0) return null;
-    
-    // Calculate total progress from all linked habits based on their numeric targets
-    let totalProgress = 0;
-    let totalTarget = 0;
-    
-    linkedHabits.forEach(habit => {
-      // Use numericTarget for progress calculation
-      const habitTarget = habit.numericTarget || 1;
-      totalTarget += habitTarget;
+    return goal.linkedHabitIds.map(habitId => {
+      const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
+      if (!habit) return null;
       
-      // Count completed instances of this habit
+      const target = goal.habitTargets![habitId] || 1;
       const completedCount = tasks.filter(t => 
         t.title === habit.title && 
         t.type === 'habit' && 
         t.completed
       ).length;
       
-      totalProgress += Math.min(completedCount, habitTarget);
-      
-      console.log(`Habit ${habit.title}: ${completedCount}/${habitTarget} completed`);
-    });
-    
-    if (totalTarget === 0) return null;
-    
-    const percentage = Math.round((totalProgress / totalTarget) * 100);
-    
-    console.log(`Total progress: ${totalProgress}/${totalTarget} = ${percentage}%`);
-    
-    return {
-      current: totalProgress,
-      target: totalTarget,
-      percentage: Math.min(percentage, 100)
-    };
+      return {
+        id: habitId,
+        title: habit.title,
+        target,
+        completed: Math.min(completedCount, target)
+      };
+    }).filter(Boolean);
   };
 
   const handleFormClose = () => {
@@ -86,27 +61,8 @@ export function LongTermGoals() {
     setSelectedGoal(goal);
   };
 
-  const renderMilestoneMarkers = (goal: Goal, progressPercentage: number) => {
-    if (!goal.milestones || goal.milestones.length === 0) return null;
-    
-    return (
-      <div className="relative mt-1">
-        {goal.milestones.map((milestone) => (
-          <div
-            key={milestone.id}
-            className="absolute top-0 h-3 w-0.5 bg-gray-400"
-            style={{ left: `${milestone.percentageTarget}%` }}
-            title={`${milestone.title}: ${milestone.percentageTarget}%`}
-          >
-            <div className="absolute -top-1 -left-2 w-4 h-4 bg-white border-2 border-gray-400 rounded-full flex items-center justify-center">
-              {progressPercentage >= milestone.percentageTarget && (
-                <CheckCircle className="h-2 w-2 text-green-500" />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  const handleMilestoneToggle = (goalId: string, milestoneId: string) => {
+    toggleGoalMilestone(goalId, milestoneId);
   };
 
   return (
@@ -151,10 +107,7 @@ export function LongTermGoals() {
         <div className="space-y-6">
           {goals.map((goal) => {
             const progress = getGoalProgress(goal.id);
-            const linkedHabitsProgress = calculateLinkedHabitsProgress(goal);
-            
-            // Use linked habits progress as the main progress indicator
-            const mainProgress = linkedHabitsProgress || progress;
+            const habitData = getHabitCompletionData(goal);
             
             return (
               <Card key={goal.id} className="w-full">
@@ -187,88 +140,116 @@ export function LongTermGoals() {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Main Progress Indicator */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {linkedHabitsProgress ? 'Habit Progress' : 'Milestone Progress'}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {mainProgress.percentage}%
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <Progress value={mainProgress.percentage} className="h-3" />
-                      {renderMilestoneMarkers(goal, mainProgress.percentage)}
-                    </div>
-                    {linkedHabitsProgress && (
-                      <div className="text-xs text-muted-foreground">
-                        {linkedHabitsProgress.current} / {linkedHabitsProgress.target} habit completions
+                  {/* Dual Progress Bars */}
+                  <div className="space-y-4">
+                    {/* Habit Progress Bar */}
+                    {progress.habitProgress && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-orange-500" />
+                            <span className="text-sm font-medium">Habit Progress</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {progress.habitProgress.percentage}%
+                          </span>
+                        </div>
+                        <Progress value={progress.habitProgress.percentage} className="h-3 bg-orange-100">
+                          <div 
+                            className="h-full bg-orange-500 transition-all"
+                            style={{ width: `${progress.habitProgress.percentage}%` }}
+                          />
+                        </Progress>
+                        <div className="text-xs text-muted-foreground">
+                          {progress.habitProgress.current} / {progress.habitProgress.target} habit completions
+                        </div>
                       </div>
                     )}
-                    {!linkedHabitsProgress && (
-                      <div className="text-xs text-muted-foreground">
-                        {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
+
+                    {/* Milestone Progress Bar */}
+                    {progress.milestoneProgress && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-medium">Milestone Progress</span>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {progress.milestoneProgress.percentage}%
+                          </span>
+                        </div>
+                        <Progress value={progress.milestoneProgress.percentage} className="h-3 bg-blue-100">
+                          <div 
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${progress.milestoneProgress.percentage}%` }}
+                          />
+                        </Progress>
+                        <div className="text-xs text-muted-foreground">
+                          {progress.milestoneProgress.completedMilestones} / {progress.milestoneProgress.totalMilestones} milestones completed
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fallback to old progress if no dual progress */}
+                    {!progress.habitProgress && !progress.milestoneProgress && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Overall Progress</span>
+                          <span className="text-sm text-muted-foreground">
+                            {progress.percentage}%
+                          </span>
+                        </div>
+                        <Progress value={progress.percentage} className="h-3" />
+                        <div className="text-xs text-muted-foreground">
+                          {progress.completedSubtasks} of {progress.totalSubtasks} tasks completed
+                        </div>
                       </div>
                     )}
                   </div>
                   
-                  {/* Milestones */}
-                  {goal.milestones && goal.milestones.length > 0 && (
+                  {/* Linked Habits Display */}
+                  {habitData.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Milestones</h4>
+                      <h4 className="text-sm font-medium">Linked Habits</h4>
                       <div className="space-y-1">
-                        {goal.milestones.map((milestone, index) => (
-                          <div key={milestone.id} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className={`h-4 w-4 ${
-                              mainProgress.percentage >= milestone.percentageTarget 
-                                ? 'text-green-500' 
-                                : 'text-muted-foreground'
-                            }`} />
-                            <span className={
-                              mainProgress.percentage >= milestone.percentageTarget 
-                                ? 'line-through text-muted-foreground' 
-                                : ''
-                            }>
-                              {milestone.title} ({milestone.percentageTarget}%)
-                            </span>
-                            {milestone.dueDate && (
-                              <span className="text-xs text-muted-foreground">
-                                Due {format(new Date(milestone.dueDate), 'MMM dd')}
+                        {habitData.map(habit => (
+                          <div key={habit.id} className="flex items-center justify-between text-sm p-2 bg-muted/30 rounded">
+                            <span>{habit.title}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">
+                                {habit.completed}/{habit.target}
                               </span>
-                            )}
+                              <Badge variant="outline" className="text-xs">
+                                {habit.target}×
+                              </Badge>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
                   
-                  {/* Linked Habits Display */}
-                  {goal.linkedHabitIds && goal.linkedHabitIds.length > 0 && (
+                  {/* Milestones with Manual Completion */}
+                  {goal.milestones && goal.milestones.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Linked Habits</h4>
-                      <div className="space-y-1">
-                        {goal.linkedHabitIds.map(habitId => {
-                          const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
-                          if (!habit) return null;
-                          
-                          const completedCount = tasks.filter(t => 
-                            t.title === habit.title && 
-                            t.type === 'habit' && 
-                            t.completed
-                          ).length;
-                          
-                          const target = habit.numericTarget || 1;
-                          
-                          return (
-                            <div key={habitId} className="flex items-center justify-between text-sm">
-                              <span>{habit.title}</span>
-                              <span className="text-muted-foreground">
-                                {completedCount}/{target}
+                      <h4 className="text-sm font-medium">Milestones</h4>
+                      <div className="space-y-2">
+                        {goal.milestones.map((milestone) => (
+                          <div key={milestone.id} className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded">
+                            <Checkbox
+                              checked={milestone.isCompleted}
+                              onCheckedChange={() => handleMilestoneToggle(goal.id, milestone.id)}
+                            />
+                            <span className={milestone.isCompleted ? 'line-through text-muted-foreground' : ''}>
+                              {milestone.title} ({milestone.percentageTarget}%)
+                            </span>
+                            {milestone.dueDate && (
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                Due {format(new Date(milestone.dueDate), 'MMM dd')}
                               </span>
-                            </div>
-                          );
-                        })}
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

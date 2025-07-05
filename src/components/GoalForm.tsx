@@ -38,6 +38,11 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
   const [linkedTaskIds, setLinkedTaskIds] = useState<string[]>(initialGoal?.linkedTaskIds || []);
   const [linkedHabitIds, setLinkedHabitIds] = useState<string[]>(initialGoal?.linkedHabitIds || []);
   
+  // New: Habit targets for dual progress system
+  const [habitTargets, setHabitTargets] = useState<{ [habitId: string]: number }>(
+    initialGoal?.habitTargets || {}
+  );
+  
   // Milestones
   const [milestones, setMilestones] = useState<GoalMilestone[]>(initialGoal?.milestones || []);
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
@@ -95,6 +100,7 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
       targetDate,
       linkedTaskIds: linkedTaskIds.length > 0 ? linkedTaskIds : undefined,
       linkedHabitIds: linkedHabitIds.length > 0 ? linkedHabitIds : undefined,
+      habitTargets: Object.keys(habitTargets).length > 0 ? habitTargets : undefined,
       milestones: milestones,
     };
 
@@ -116,11 +122,35 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
   };
 
   const toggleHabitLink = (habitId: string) => {
-    setLinkedHabitIds(prev => 
-      prev.includes(habitId) 
+    setLinkedHabitIds(prev => {
+      const newLinkedHabits = prev.includes(habitId) 
         ? prev.filter(id => id !== habitId)
-        : [...prev, habitId]
-    );
+        : [...prev, habitId];
+      
+      // Remove habit target if habit is unlinked
+      if (!newLinkedHabits.includes(habitId)) {
+        setHabitTargets(prevTargets => {
+          const newTargets = { ...prevTargets };
+          delete newTargets[habitId];
+          return newTargets;
+        });
+      } else if (!prev.includes(habitId)) {
+        // Set default target for newly linked habit
+        setHabitTargets(prevTargets => ({
+          ...prevTargets,
+          [habitId]: 1
+        }));
+      }
+      
+      return newLinkedHabits;
+    });
+  };
+
+  const updateHabitTarget = (habitId: string, target: number) => {
+    setHabitTargets(prev => ({
+      ...prev,
+      [habitId]: Math.max(1, target) // Ensure minimum of 1
+    }));
   };
 
   return (
@@ -342,10 +372,10 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
 
           {availableHabits.length > 0 && (
             <div>
-              <label className="block text-sm font-medium mb-2">Link Habits</label>
-              <div className="max-h-32 overflow-y-auto space-y-1">
+              <label className="block text-sm font-medium mb-2">Link Habits with Targets</label>
+              <div className="max-h-48 overflow-y-auto space-y-2">
                 {availableHabits.map((habit) => (
-                  <div key={habit.id} className="flex items-center space-x-2">
+                  <div key={habit.id} className="flex items-center space-x-2 p-2 border rounded">
                     <Checkbox
                       id={`habit-${habit.id}`}
                       checked={linkedHabitIds.includes(habit.id)}
@@ -357,10 +387,18 @@ export function GoalForm({ onClose, initialGoal }: GoalFormProps) {
                     <Badge variant="outline" className="text-xs">
                       {habit.category}
                     </Badge>
-                    {habit.numericTarget && (
-                      <Badge variant="secondary" className="text-xs">
-                        Target: {habit.numericTarget}
-                      </Badge>
+                    {linkedHabitIds.includes(habit.id) && (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">Target:</span>
+                        <Input
+                          type="number"
+                          value={habitTargets[habit.id] || 1}
+                          onChange={(e) => updateHabitTarget(habit.id, parseInt(e.target.value) || 1)}
+                          className="w-16 h-8"
+                          min="1"
+                        />
+                        <span className="text-xs text-muted-foreground">×</span>
+                      </div>
                     )}
                   </div>
                 ))}

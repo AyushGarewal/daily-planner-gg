@@ -12,6 +12,8 @@ export interface Goal {
   // Link to habit progress instead of separate numeric target
   linkedTaskIds?: string[];
   linkedHabitIds?: string[];
+  // New: Habit targets for dual progress system
+  habitTargets?: { [habitId: string]: number }; // habitId -> target completion count
   milestones: GoalMilestone[];
 }
 
@@ -59,9 +61,15 @@ export interface GoalProgress {
   totalSubtasks: number;
   completedSubtasks: number;
   percentage: number;
-  linkedHabitsProgress?: {
+  // New: Dual progress tracking
+  habitProgress?: {
     current: number;
     target: number;
+    percentage: number;
+  };
+  milestoneProgress?: {
+    completedMilestones: number;
+    totalMilestones: number;
     percentage: number;
   };
 }
