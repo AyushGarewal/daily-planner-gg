@@ -7,14 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, FolderOpen, Calendar as CalendarIcon, Target, FileText, CheckCircle, Pause, Play, X, Edit, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Calendar as CalendarIcon, Target, FileText, CheckCircle, Pause, Play, X, Edit } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Project, ProjectNote, PROJECT_COLORS, PROJECT_ICONS } from '../types/project';
 import { useTasks } from '../hooks/useTasks';
-import { Task, Subtask } from '../types/task';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -23,10 +23,7 @@ export function ProjectManager() {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [newNote, setNewNote] = useState('');
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | undefined>(new Date());
-  const [newTaskSubtasks, setNewTaskSubtasks] = useState<Subtask[]>([]);
-  const { tasks, addTask, deleteTask, completeTask, toggleSubtask } = useTasks();
+  const { tasks } = useTasks();
 
   const [projectForm, setProjectForm] = useState({
     name: '',
@@ -36,11 +33,6 @@ export function ProjectManager() {
     targetDate: undefined as Date | undefined,
     color: PROJECT_COLORS[0],
     icon: PROJECT_ICONS[0],
-    initialTasks: [] as Array<{
-      title: string;
-      dueDate: Date;
-      subtasks: Subtask[];
-    }>
   });
 
   const resetForm = () => {
@@ -52,53 +44,7 @@ export function ProjectManager() {
       targetDate: undefined,
       color: PROJECT_COLORS[0],
       icon: PROJECT_ICONS[0],
-      initialTasks: []
     });
-  };
-
-  const addTaskToProject = () => {
-    if (!newTaskTitle.trim()) return;
-
-    const newTask = {
-      title: newTaskTitle.trim(),
-      dueDate: newTaskDueDate || new Date(),
-      subtasks: newTaskSubtasks.filter(st => st.title.trim())
-    };
-
-    setProjectForm(prev => ({
-      ...prev,
-      initialTasks: [...prev.initialTasks, newTask]
-    }));
-
-    setNewTaskTitle('');
-    setNewTaskDueDate(new Date());
-    setNewTaskSubtasks([]);
-  };
-
-  const removeTaskFromProject = (index: number) => {
-    setProjectForm(prev => ({
-      ...prev,
-      initialTasks: prev.initialTasks.filter((_, i) => i !== index)
-    }));
-  };
-
-  const addSubtaskToNewTask = () => {
-    const newSubtask: Subtask = {
-      id: `subtask_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      title: '',
-      completed: false
-    };
-    setNewTaskSubtasks(prev => [...prev, newSubtask]);
-  };
-
-  const updateSubtaskTitle = (subtaskId: string, title: string) => {
-    setNewTaskSubtasks(prev => prev.map(st => 
-      st.id === subtaskId ? { ...st, title } : st
-    ));
-  };
-
-  const removeSubtaskFromNewTask = (subtaskId: string) => {
-    setNewTaskSubtasks(prev => prev.filter(st => st.id !== subtaskId));
   };
 
   const handleCreateProject = () => {
@@ -122,69 +68,9 @@ export function ProjectManager() {
       updatedAt: new Date(),
     };
 
-    // Create initial tasks for the project
-    const projectTasks: string[] = [];
-    projectForm.initialTasks.forEach(taskData => {
-      const task: Task = {
-        id: crypto.randomUUID(),
-        title: taskData.title,
-        description: '',
-        subtasks: taskData.subtasks,
-        dueDate: taskData.dueDate,
-        priority: 'Medium',
-        recurrence: 'None',
-        xpValue: 10,
-        category: 'Work',
-        completed: false,
-        taskType: 'normal',
-        type: 'task',
-        projectId: newProject.id
-      };
-      addTask(task);
-      projectTasks.push(task.id);
-    });
-
-    newProject.tasks = projectTasks;
     setProjects(prev => [...prev, newProject]);
     setIsCreating(false);
     resetForm();
-  };
-
-  const addTaskToExistingProject = (projectId: string) => {
-    if (!newTaskTitle.trim()) return;
-
-    const task: Task = {
-      id: crypto.randomUUID(),
-      title: newTaskTitle.trim(),
-      description: '',
-      subtasks: newTaskSubtasks.filter(st => st.title.trim()),
-      dueDate: newTaskDueDate || new Date(),
-      priority: 'Medium',
-      recurrence: 'None',
-      xpValue: 10,
-      category: 'Work',
-      completed: false,
-      taskType: 'normal',
-      type: 'task',
-      projectId
-    };
-
-    addTask(task);
-
-    // Update project tasks list
-    setProjects(prev => prev.map(project => 
-      project.id === projectId 
-        ? { 
-            ...project, 
-            tasks: [...project.tasks, task.id],
-            updatedAt: new Date()
-          }
-        : project
-    ));
-
-    setNewTaskTitle('');
-    setNewTaskDueDate(new Date());
-    setNewTaskSubtasks([]);
   };
 
   const updateProjectStatus = (projectId: string, status: Project['status']) => {
@@ -218,6 +104,14 @@ export function ProjectManager() {
     setNewNote('');
   };
 
+  const calculateProjectProgress = (project: Project): number => {
+    const projectTasks = tasks.filter(task => project.tasks.includes(task.id));
+    if (projectTasks.length === 0) return 0;
+    
+    const completedTasks = projectTasks.filter(task => task.completed).length;
+    return Math.round((completedTasks / projectTasks.length) * 100);
+  };
+
   const getStatusColor = (status: Project['status']) => {
     switch (status) {
       case 'active': return 'bg-green-500';
@@ -226,10 +120,6 @@ export function ProjectManager() {
       case 'cancelled': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
-  };
-
-  const getProjectTasks = (projectId: string) => {
-    return tasks.filter(task => task.projectId === projectId);
   };
 
   const activeProjects = projects.filter(p => p.status === 'active');
@@ -255,7 +145,7 @@ export function ProjectManager() {
               New Project
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
             </DialogHeader>
@@ -384,120 +274,6 @@ export function ProjectManager() {
                 </div>
               </div>
 
-              {/* Initial Tasks Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Initial Tasks (Optional)</label>
-                </div>
-                
-                <div className="border rounded-lg p-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-medium">Task Title</label>
-                      <Input
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        placeholder="Enter task name..."
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Due Date</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !newTaskDueDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={newTaskDueDate}
-                            onSelect={setNewTaskDueDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-
-                  {/* Subtasks for new task */}
-                  <div>
-                    <label className="text-xs font-medium">Subtasks (Optional)</label>
-                    <div className="space-y-2">
-                      {newTaskSubtasks.map((subtask) => (
-                        <div key={subtask.id} className="flex items-center gap-2">
-                          <Input
-                            value={subtask.title}
-                            onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
-                            placeholder="Subtask title..."
-                            className="flex-1 text-sm"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeSubtaskFromNewTask(subtask.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addSubtaskToNewTask}
-                        className="w-full"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Subtask
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Button onClick={addTaskToProject} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Task to Project
-                  </Button>
-                </div>
-
-                {/* Display added tasks */}
-                {projectForm.initialTasks.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Tasks to be created:</h4>
-                    {projectForm.initialTasks.map((task, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <div>
-                          <span className="text-sm font-medium">{task.title}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            Due: {format(task.dueDate, 'MMM dd')}
-                          </span>
-                          {task.subtasks.length > 0 && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              ({task.subtasks.length} subtasks)
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTaskFromProject(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               <div className="flex gap-2 pt-4">
                 <Button onClick={handleCreateProject} className="flex-1">
                   Create Project
@@ -511,10 +287,10 @@ export function ProjectManager() {
         </Dialog>
       </div>
 
-      {/* Projects Grid - Remove progress bars */}
+      {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {activeProjects.map((project) => {
-          const projectTasks = getProjectTasks(project.id);
+          const progress = calculateProjectProgress(project);
           return (
             <Card 
               key={project.id} 
@@ -543,8 +319,16 @@ export function ProjectManager() {
               
               <CardContent>
                 <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Progress</span>
+                      <span>{progress}%</span>
+                    </div>
+                    <Progress value={progress} className="h-2" />
+                  </div>
+                  
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{projectTasks.length} tasks</span>
+                    <span>{project.tasks.length} tasks</span>
                     <span>{project.notes.length} notes</span>
                   </div>
                   
@@ -609,169 +393,31 @@ export function ProjectManager() {
                   <p className="text-muted-foreground">{selectedProject.description}</p>
                 )}
                 
-                <Tabs defaultValue="tasks" className="w-full">
+                <Tabs defaultValue="overview" className="w-full">
                   <TabsList>
-                    <TabsTrigger value="tasks">Tasks</TabsTrigger>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="tasks">Tasks</TabsTrigger>
                     <TabsTrigger value="notes">Notes</TabsTrigger>
                   </TabsList>
-                  
-                  <TabsContent value="tasks" className="space-y-4">
-                    {/* Add new task section */}
-                    <div className="border rounded-lg p-4 space-y-4">
-                      <h4 className="font-medium">Add New Task</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Input
-                            value={newTaskTitle}
-                            onChange={(e) => setNewTaskTitle(e.target.value)}
-                            placeholder="Task title..."
-                          />
-                        </div>
-                        <div>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className={cn(
-                                  "w-full justify-start text-left font-normal",
-                                  !newTaskDueDate && "text-muted-foreground"
-                                )}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {newTaskDueDate ? format(newTaskDueDate, "PPP") : "Pick date"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                              <Calendar
-                                mode="single"
-                                selected={newTaskDueDate}
-                                onSelect={setNewTaskDueDate}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium">Subtasks (Optional)</label>
-                        <div className="space-y-2">
-                          {newTaskSubtasks.map((subtask) => (
-                            <div key={subtask.id} className="flex items-center gap-2">
-                              <Input
-                                value={subtask.title}
-                                onChange={(e) => updateSubtaskTitle(subtask.id, e.target.value)}
-                                placeholder="Subtask title..."
-                                className="flex-1"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeSubtaskFromNewTask(subtask.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={addSubtaskToNewTask}
-                            className="w-full"
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Subtask
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Button onClick={() => addTaskToExistingProject(selectedProject.id)} className="w-full">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Task
-                      </Button>
-                    </div>
-
-                    {/* Display project tasks */}
-                    <div className="space-y-3">
-                      {getProjectTasks(selectedProject.id).map((task) => (
-                        <div key={task.id} className="p-3 border rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={task.completed}
-                                onChange={() => completeTask(task.id)}
-                                className="rounded"
-                              />
-                              <div>
-                                <span className={`${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                                  {task.title}
-                                </span>
-                                <div className="text-xs text-muted-foreground">
-                                  Due: {format(task.dueDate, 'MMM dd, yyyy')}
-                                  {task.subtasks.length > 0 && (
-                                    <span className="ml-2">
-                                      ({task.subtasks.filter(st => st.completed).length}/{task.subtasks.length} subtasks)
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteTask(task.id)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          
-                          {task.subtasks.length > 0 && (
-                            <div className="ml-6 mt-2 space-y-1">
-                              {task.subtasks.map((subtask) => (
-                                <div key={subtask.id} className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={subtask.completed}
-                                    onChange={() => toggleSubtask(task.id, subtask.id)}
-                                    className="rounded text-xs"
-                                  />
-                                  <span className={`text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
-                                    {subtask.title}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {getProjectTasks(selectedProject.id).length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Target className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                        <p>No tasks yet</p>
-                        <p className="text-sm">Add your first task above to get started.</p>
-                      </div>
-                    )}
-                  </TabsContent>
                   
                   <TabsContent value="overview" className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card>
                         <CardContent className="pt-6">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold">{calculateProjectProgress(selectedProject)}%</div>
+                            <p className="text-sm text-muted-foreground">Completion</p>
+                            <Progress value={calculateProjectProgress(selectedProject)} className="mt-2" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardContent className="pt-6">
                           <div className="space-y-2">
                             <div className="flex justify-between">
                               <span className="text-sm">Tasks</span>
-                              <span className="font-medium">{getProjectTasks(selectedProject.id).length}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm">Completed Tasks</span>
-                              <span className="font-medium">{getProjectTasks(selectedProject.id).filter(t => t.completed).length}</span>
+                              <span className="font-medium">{selectedProject.tasks.length}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm">Notes</span>
@@ -784,6 +430,14 @@ export function ProjectManager() {
                           </div>
                         </CardContent>
                       </Card>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="tasks">
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Target className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                      <p>Task assignment coming soon!</p>
+                      <p className="text-sm">You'll be able to assign tasks to projects here.</p>
                     </div>
                   </TabsContent>
                   
