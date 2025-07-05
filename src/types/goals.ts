@@ -12,7 +12,7 @@ export interface Goal {
   // Link to habit progress instead of separate numeric target
   linkedTaskIds?: string[];
   linkedHabitIds?: string[];
-  milestones?: GoalMilestone[];
+  milestones: GoalMilestone[];
 }
 
 export interface GoalMilestone {

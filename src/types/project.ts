@@ -9,12 +9,27 @@ export interface Project {
   color: string;
   icon: string;
   status: 'active' | 'completed' | 'paused' | 'cancelled';
-  progress: number; // 0-100
-  tasks: string[]; // task IDs
+  tasks: ProjectTask[]; // Changed from string[] to ProjectTask[]
   habits: string[]; // habit IDs  
   notes: ProjectNote[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ProjectTask {
+  id: string;
+  title: string;
+  dueDate?: Date;
+  completed: boolean;
+  subtasks: ProjectSubtask[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProjectSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
 }
 
 export interface ProjectNote {

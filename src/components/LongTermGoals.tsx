@@ -11,7 +11,6 @@ import { useTasks } from '../hooks/useTasks';
 import { GoalForm } from './GoalForm';
 import { GoalDetail } from './GoalDetail';
 import { Goal } from '../types/goals';
-import { ProjectTaskIntegration } from './ProjectTaskIntegration';
 import { format } from 'date-fns';
 
 export function LongTermGoals() {
@@ -85,6 +84,29 @@ export function LongTermGoals() {
 
   const handleGoalClick = (goal: Goal) => {
     setSelectedGoal(goal);
+  };
+
+  const renderMilestoneMarkers = (goal: Goal, progressPercentage: number) => {
+    if (!goal.milestones || goal.milestones.length === 0) return null;
+    
+    return (
+      <div className="relative mt-1">
+        {goal.milestones.map((milestone) => (
+          <div
+            key={milestone.id}
+            className="absolute top-0 h-3 w-0.5 bg-gray-400"
+            style={{ left: `${milestone.percentageTarget}%` }}
+            title={`${milestone.title}: ${milestone.percentageTarget}%`}
+          >
+            <div className="absolute -top-1 -left-2 w-4 h-4 bg-white border-2 border-gray-400 rounded-full flex items-center justify-center">
+              {progressPercentage >= milestone.percentageTarget && (
+                <CheckCircle className="h-2 w-2 text-green-500" />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -175,7 +197,10 @@ export function LongTermGoals() {
                         {mainProgress.percentage}%
                       </span>
                     </div>
-                    <Progress value={mainProgress.percentage} className="h-3" />
+                    <div className="relative">
+                      <Progress value={mainProgress.percentage} className="h-3" />
+                      {renderMilestoneMarkers(goal, mainProgress.percentage)}
+                    </div>
                     {linkedHabitsProgress && (
                       <div className="text-xs text-muted-foreground">
                         {linkedHabitsProgress.current} / {linkedHabitsProgress.target} habit completions
@@ -195,8 +220,16 @@ export function LongTermGoals() {
                       <div className="space-y-1">
                         {goal.milestones.map((milestone, index) => (
                           <div key={milestone.id} className="flex items-center gap-2 text-sm">
-                            <CheckCircle className={`h-4 w-4 ${milestone.isCompleted ? 'text-green-500' : 'text-muted-foreground'}`} />
-                            <span className={milestone.isCompleted ? 'line-through text-muted-foreground' : ''}>
+                            <CheckCircle className={`h-4 w-4 ${
+                              mainProgress.percentage >= milestone.percentageTarget 
+                                ? 'text-green-500' 
+                                : 'text-muted-foreground'
+                            }`} />
+                            <span className={
+                              mainProgress.percentage >= milestone.percentageTarget 
+                                ? 'line-through text-muted-foreground' 
+                                : ''
+                            }>
                               {milestone.title} ({milestone.percentageTarget}%)
                             </span>
                             {milestone.dueDate && (
@@ -206,6 +239,36 @@ export function LongTermGoals() {
                             )}
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Linked Habits Display */}
+                  {goal.linkedHabitIds && goal.linkedHabitIds.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Linked Habits</h4>
+                      <div className="space-y-1">
+                        {goal.linkedHabitIds.map(habitId => {
+                          const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
+                          if (!habit) return null;
+                          
+                          const completedCount = tasks.filter(t => 
+                            t.title === habit.title && 
+                            t.type === 'habit' && 
+                            t.completed
+                          ).length;
+                          
+                          const target = habit.numericTarget || 1;
+                          
+                          return (
+                            <div key={habitId} className="flex items-center justify-between text-sm">
+                              <span>{habit.title}</span>
+                              <span className="text-muted-foreground">
+                                {completedCount}/{target}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -223,15 +286,6 @@ export function LongTermGoals() {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Task Integration */}
-                  <div className="border-t pt-4">
-                    <ProjectTaskIntegration
-                      projectId={goal.id}
-                      projectName={goal.title}
-                      projectColor={getCategoryColor(goal.category).replace('bg-', '')}
-                    />
-                  </div>
                   
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
