@@ -40,6 +40,9 @@ const planningItems = [
   { title: 'Routines', value: 'routines', icon: Clock },
   { title: 'Projects', value: 'projects', icon: FolderOpen },
   { title: 'Challenges', value: 'challenges', icon: Trophy },
+];
+
+const habitItems = [
   { title: 'Side Habits', value: 'side-habits', icon: Plus },
   { title: 'Negative Habits', value: 'negative-habits', icon: Minus },
 ];
@@ -147,6 +150,26 @@ export function AppSidebar({ activeTab, onTabChange, progress }: AppSidebarProps
           <SidebarGroupContent>
             <SidebarMenu>
               {planningItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    onClick={() => handleTabClick(item.value)}
+                    className={activeTab === item.value ? 'bg-accent text-accent-foreground' : ''}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {state !== "collapsed" && <span>{item.title}</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Habits */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Habits</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {habitItems.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton
                     onClick={() => handleTabClick(item.value)}

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Shield, Calendar } from 'lucide-react';
+import { Plus, Trash2, Shield, Calendar, Undo2 } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
@@ -88,32 +88,42 @@ export function NegativeHabitsPanel() {
   const toggleHabitAvoidance = (habitId: string) => {
     setNegativeHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        const isAvoided = habit.avoidedDates.includes(today);
+        const wasAvoided = habit.avoidedDates.includes(today);
         const updatedHabit = {
           ...habit,
-          avoidedDates: isAvoided
+          avoidedDates: wasAvoided
             ? habit.avoidedDates.filter(date => date !== today)
             : [...habit.avoidedDates, today],
-          failedDates: isAvoided
+          failedDates: wasAvoided
             ? habit.failedDates
             : habit.failedDates.filter(date => date !== today)
         };
         
-        // Add XP if avoiding the habit for the first time today
-        if (!isAvoided) {
-          let xpToAdd = habit.xpValue;
-          
-          if (habit.subtasks.length > 0) {
-            const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
-            const completionPercentage = completedSubtasks / habit.subtasks.length;
-            xpToAdd = Math.round(habit.xpValue * completionPercentage);
-          }
-          
-          if (xpToAdd > 0) {
+        // Calculate XP based on subtask completion if applicable
+        let xpToAdd = habit.xpValue;
+        
+        if (habit.subtasks.length > 0) {
+          const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
+          const completionPercentage = completedSubtasks / habit.subtasks.length;
+          xpToAdd = Math.round(habit.xpValue * completionPercentage);
+        }
+        
+        if (xpToAdd > 0) {
+          if (wasAvoided) {
+            // Undo avoidance - subtract XP
+            console.log(`Undoing negative habit avoidance - removing ${xpToAdd} XP for: ${habit.name}`);
+            addBonusXP(-xpToAdd);
+            
+            setProgress(prevProgress => ({
+              ...prevProgress,
+              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
+              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
+            }));
+          } else {
+            // Mark as avoided - add XP
             console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
             addBonusXP(xpToAdd);
             
-            // Update progress stats directly
             setProgress(prevProgress => ({
               ...prevProgress,
               totalXP: prevProgress.totalXP + xpToAdd,
@@ -131,23 +141,32 @@ export function NegativeHabitsPanel() {
   const markHabitFailed = (habitId: string) => {
     setNegativeHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        const hasFailed = habit.failedDates.includes(today);
+        const hadFailed = habit.failedDates.includes(today);
         const updatedHabit = {
           ...habit,
-          failedDates: hasFailed
+          failedDates: hadFailed
             ? habit.failedDates.filter(date => date !== today)
             : [...habit.failedDates, today],
-          avoidedDates: hasFailed
+          avoidedDates: hadFailed
             ? habit.avoidedDates
             : habit.avoidedDates.filter(date => date !== today)
         };
         
-        // Apply XP penalty if failed for the first time today
-        if (!hasFailed) {
+        if (hadFailed) {
+          // Undo failure - add back XP penalty
+          console.log(`Undoing negative habit failure - adding back ${habit.xpPenalty} XP for: ${habit.name}`);
+          addBonusXP(habit.xpPenalty);
+          
+          setProgress(prevProgress => ({
+            ...prevProgress,
+            totalXP: prevProgress.totalXP + habit.xpPenalty,
+            level: Math.floor((prevProgress.totalXP + habit.xpPenalty) / 100) + 1
+          }));
+        } else {
+          // Apply XP penalty for failure
           console.log(`Removing ${habit.xpPenalty} XP for failing negative habit: ${habit.name}`);
           addBonusXP(-habit.xpPenalty);
           
-          // Update progress stats directly
           setProgress(prevProgress => ({
             ...prevProgress,
             totalXP: Math.max(0, prevProgress.totalXP - habit.xpPenalty),
@@ -413,14 +432,27 @@ export function NegativeHabitsPanel() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteNegativeHabit(habit.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {(isAvoided || hasFailed) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => isAvoided ? toggleHabitAvoidance(habit.id) : markHabitFailed(habit.id)}
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Undo status"
+                        >
+                          <Undo2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteNegativeHabit(habit.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   {habit.subtasks.length > 0 && (

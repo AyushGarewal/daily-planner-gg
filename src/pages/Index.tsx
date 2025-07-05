@@ -347,15 +347,6 @@ const Index = () => {
                   <Avatar progress={progress} size="small" showDetails={true} />
                 </div>
                 
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={confirmReset}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  Reset All
-                </Button>
-                
                 <ThemeSelector currentTheme={currentTheme} onThemeChange={handleThemeChange} />
                 
                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -458,11 +449,23 @@ const Index = () => {
                   <WellnessLogging />
                 </div>
                 
-                {/* Add Side Habits and Negative Habits */}
+                {/* Add Side Habits and Negative Habits to Today view without separate headers */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                   <SideHabitsPanel />
                   <NegativeHabitsPanel />
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'side-habits' && (
+              <div className="animate-fade-in">
+                <SideHabitsPanel />
+              </div>
+            )}
+
+            {activeTab === 'negative-habits' && (
+              <div className="animate-fade-in">
+                <NegativeHabitsPanel />
               </div>
             )}
 
@@ -587,6 +590,22 @@ const Index = () => {
             {activeTab === 'profile' && (
               <div className="space-y-4 sm:space-y-6 animate-fade-in">
                 <Profile progress={progress} userStats={userStats} />
+                
+                {/* Add Reset Button to Profile section */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="text-lg font-semibold mb-2 text-red-600">Danger Zone</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    This will permanently delete all your data including tasks, habits, goals, projects, and progress.
+                  </p>
+                  <Button 
+                    variant="destructive" 
+                    onClick={confirmReset}
+                    className="w-full sm:w-auto"
+                  >
+                    Reset All Data
+                  </Button>
+                </div>
+                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <HabitHeatmap />
                   <WeeklyPerformanceTracker />

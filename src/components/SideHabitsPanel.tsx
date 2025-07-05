@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Calendar, Star } from 'lucide-react';
+import { Plus, Trash2, Calendar, Star, Undo2 } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
@@ -84,29 +84,39 @@ export function SideHabitsPanel() {
   const toggleHabitCompletion = (habitId: string) => {
     setSideHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
-        const isCompleted = habit.completedDates.includes(today);
+        const wasCompleted = habit.completedDates.includes(today);
         const updatedHabit = {
           ...habit,
-          completedDates: isCompleted
+          completedDates: wasCompleted
             ? habit.completedDates.filter(date => date !== today)
             : [...habit.completedDates, today]
         };
         
         // Calculate XP based on subtask completion if applicable
-        if (!isCompleted && habit.xpValue) {
-          let xpToAdd = habit.xpValue;
-          
-          if (habit.subtasks.length > 0) {
-            const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
-            const completionPercentage = completedSubtasks / habit.subtasks.length;
-            xpToAdd = Math.round(habit.xpValue * completionPercentage);
-          }
-          
-          if (xpToAdd > 0) {
+        let xpToAdd = habit.xpValue || 0;
+        
+        if (habit.subtasks.length > 0) {
+          const completedSubtasks = habit.subtasks.filter(st => st.completed).length;
+          const completionPercentage = completedSubtasks / habit.subtasks.length;
+          xpToAdd = Math.round((habit.xpValue || 0) * completionPercentage);
+        }
+        
+        if (xpToAdd > 0) {
+          if (wasCompleted) {
+            // Undo completion - subtract XP
+            console.log(`Undoing side habit completion - removing ${xpToAdd} XP for: ${habit.name}`);
+            addBonusXP(-xpToAdd);
+            
+            setProgress(prevProgress => ({
+              ...prevProgress,
+              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
+              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
+            }));
+          } else {
+            // Complete habit - add XP
             console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
             addBonusXP(xpToAdd);
             
-            // Update progress stats directly
             setProgress(prevProgress => ({
               ...prevProgress,
               totalXP: prevProgress.totalXP + xpToAdd,
@@ -302,7 +312,7 @@ export function SideHabitsPanel() {
           </Dialog>
         </div>
         <p className="text-sm text-muted-foreground">
-          Track habits and earn XP without affecting streaks
+          Track habits and earn XP without affecting daily completion percentage
         </p>
       </CardHeader>
       <CardContent>
@@ -349,14 +359,27 @@ export function SideHabitsPanel() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteSideHabit(habit.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {isCompleted && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleHabitCompletion(habit.id)}
+                          className="text-blue-500 hover:text-blue-700"
+                          title="Undo completion"
+                        >
+                          <Undo2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteSideHabit(habit.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   
                   {habit.subtasks.length > 0 && (
