@@ -29,11 +29,11 @@ export function SideHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP, progress, setProgress } = useTasks();
+  const { progress, setProgress } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
-  const allCategories = [...CATEGORIES, ...customCategories];
+  const allCategories = [...CATEGORIES, ...customCategories.map(cat => cat.name)];
 
   // Listen for undo events
   useEffect(() => {
@@ -134,9 +134,9 @@ export function SideHabitsPanel() {
         
         if (xpToAdd > 0) {
           if (wasCompleted) {
-            // Undo completion - subtract XP
+            // Undo completion - create negative transaction for undo
             console.log(`Undoing side habit completion - removing ${xpToAdd} XP for: ${habit.name}`);
-            addBonusXP(-xpToAdd);
+            addXPTransaction('side-habit', habit.id, habit.name, -xpToAdd);
             
             setProgress(prevProgress => ({
               ...prevProgress,
@@ -144,13 +144,9 @@ export function SideHabitsPanel() {
               level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
             }));
           } else {
-            // Complete habit - add XP
+            // Complete habit - add XP and create transaction for undo
             console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
-            
-            // Add XP transaction for undo functionality
             addXPTransaction('side-habit', habit.id, habit.name, xpToAdd);
-            
-            addBonusXP(xpToAdd);
             
             setProgress(prevProgress => ({
               ...prevProgress,
@@ -219,7 +215,20 @@ export function SideHabitsPanel() {
     return Math.round((completedSubtasks / habit.subtasks.length) * 100);
   };
 
-  const todaysHabits = sideHabits.filter(shouldShowHabitToday);
+  // Get all side habits that should show today (including recurring ones)
+  const getAllSideHabitsForToday = () => {
+    const todaysHabits: SideHabit[] = [];
+    
+    sideHabits.forEach(habit => {
+      if (shouldShowHabitToday(habit)) {
+        todaysHabits.push(habit);
+      }
+    });
+    
+    return todaysHabits;
+  };
+
+  const todaysHabits = getAllSideHabitsForToday();
 
   return (
     <Card>

@@ -77,6 +77,37 @@ export function useTasks() {
     return () => window.removeEventListener('xp-undo', handleXPUndo as EventListener);
   }, [setTasks, setProgress]);
 
+  // Helper function to check if a task should appear on a given date
+  const shouldTaskAppearOnDate = (task: Task, date: Date): boolean => {
+    const taskDate = new Date(task.dueDate);
+    const checkDate = new Date(date);
+    
+    // Normalize dates to compare only date parts
+    taskDate.setHours(0, 0, 0, 0);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    if (task.recurrence === 'None') {
+      return taskDate.getTime() === checkDate.getTime();
+    }
+    
+    if (task.recurrence === 'Daily') {
+      return checkDate >= taskDate;
+    }
+    
+    if (task.recurrence === 'Weekly' && task.weekDays) {
+      const dayOfWeek = checkDate.getDay();
+      return checkDate >= taskDate && task.weekDays.includes(dayOfWeek);
+    }
+    
+    if (task.recurrence === 'Monthly') {
+      const taskDay = taskDate.getDate();
+      const checkDay = checkDate.getDate();
+      return checkDate >= taskDate && taskDay === checkDay;
+    }
+    
+    return false;
+  };
+
   const addTask = (taskData: Omit<Task, 'id' | 'completed'>) => {
     const newTask: Task = {
       id: uuidv4(),
@@ -88,7 +119,22 @@ export function useTasks() {
 
   const updateTask = (id: string, updates: Partial<Task>) => {
     setTasks(prev =>
-      prev.map(task => (task.id === id ? { ...task, ...updates } : task))
+      prev.map(task => {
+        if (task.id === id) {
+          const updatedTask = { ...task, ...updates };
+          
+          // If this is a recurring task being updated, we need to update all future instances
+          if (task.recurrence !== 'None' && (updates.title || updates.category || updates.xpValue || updates.description)) {
+            console.log(`Updating recurring task: ${task.title} with recurrence: ${task.recurrence}`);
+            
+            // For recurring tasks, we update the "template" task which will affect future appearances
+            return updatedTask;
+          }
+          
+          return updatedTask;
+        }
+        return task;
+      })
     );
   };
 
@@ -260,14 +306,36 @@ export function useTasks() {
   }, []);
 
   const getTodaysTasks = (): Task[] => {
-    const today = new Date().toDateString();
-    return tasks.filter(task => {
-      if (task.dueDate) {
-        const dueDate = new Date(task.dueDate).toDateString();
-        return dueDate === today;
+    const today = new Date();
+    const todayString = today.toDateString();
+    
+    // Get all tasks that should appear today (including recurring ones)
+    const todaysTasks: Task[] = [];
+    
+    tasks.forEach(task => {
+      if (shouldTaskAppearOnDate(task, today)) {
+        // For recurring tasks, we need to create a virtual instance for today
+        if (task.recurrence !== 'None') {
+          // Check if we already have a completed instance for today
+          const completedToday = task.completedAt && new Date(task.completedAt).toDateString() === todayString;
+          
+          // Create a virtual task instance for today
+          const todayTask: Task = {
+            ...task,
+            id: `${task.id}_${todayString}`, // Unique ID for today's instance
+            completed: completedToday || false,
+            completedAt: completedToday ? task.completedAt : undefined
+          };
+          
+          todaysTasks.push(todayTask);
+        } else {
+          // Non-recurring task
+          todaysTasks.push(task);
+        }
       }
-      return false;
     });
+    
+    return todaysTasks;
   };
 
   const getVisibleTodaysTasks = (): Task[] => {
@@ -287,13 +355,29 @@ export function useTasks() {
 
   const getTasksForDate = (date: Date): Task[] => {
     const dateString = date.toDateString();
-    return tasks.filter(task => {
-      if (task.dueDate) {
-        const dueDate = new Date(task.dueDate).toDateString();
-        return dueDate === dateString;
+    const dateTasks: Task[] = [];
+    
+    tasks.forEach(task => {
+      if (shouldTaskAppearOnDate(task, date)) {
+        if (task.recurrence !== 'None') {
+          // For recurring tasks, create a virtual instance
+          const completedOnDate = task.completedAt && new Date(task.completedAt).toDateString() === dateString;
+          
+          const dateTask: Task = {
+            ...task,
+            id: `${task.id}_${dateString}`,
+            completed: completedOnDate || false,
+            completedAt: completedOnDate ? task.completedAt : undefined
+          };
+          
+          dateTasks.push(dateTask);
+        } else {
+          dateTasks.push(task);
+        }
       }
-      return false;
     });
+    
+    return dateTasks;
   };
 
   const filterTasks = (filters: { category?: string; priority?: string; completed?: boolean }): Task[] => {

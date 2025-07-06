@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +16,7 @@ import { SubtaskManager } from './SubtaskManager';
 import { NegativeHabit, NegativeHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
+import { addXPTransaction } from './XPBar';
 
 export function NegativeHabitsPanel() {
   const [negativeHabits, setNegativeHabits] = useLocalStorage<NegativeHabit[]>('negativeHabits', []);
@@ -29,11 +30,42 @@ export function NegativeHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP, progress, setProgress } = useTasks();
+  const { progress, setProgress } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
-  const allCategories = [...CATEGORIES, ...customCategories];
+  const allCategories = [...CATEGORIES, ...customCategories.map(cat => cat.name)];
+
+  // Listen for undo events
+  useEffect(() => {
+    const handleXPUndo = (event: CustomEvent) => {
+      const { type, itemId, xpChange } = event.detail;
+      
+      if (type === 'negative-habit') {
+        // Find and update the negative habit
+        setNegativeHabits(prev => prev.map(habit => {
+          if (habit.id === itemId) {
+            return {
+              ...habit,
+              avoidedDates: habit.avoidedDates.filter(date => date !== today),
+              failedDates: habit.failedDates.filter(date => date !== today)
+            };
+          }
+          return habit;
+        }));
+        
+        // Reverse XP changes  
+        setProgress(prev => ({
+          ...prev,
+          totalXP: Math.max(0, prev.totalXP - xpChange),
+          level: Math.floor(Math.max(0, prev.totalXP - xpChange) / 100) + 1
+        }));
+      }
+    };
+
+    window.addEventListener('xp-undo', handleXPUndo as EventListener);
+    return () => window.removeEventListener('xp-undo', handleXPUndo as EventListener);
+  }, [setNegativeHabits, setProgress, today]);
 
   const addNegativeHabit = () => {
     console.log('Adding negative habit:', { newHabitName, newHabitCategory });
@@ -110,9 +142,9 @@ export function NegativeHabitsPanel() {
         
         if (xpToAdd > 0) {
           if (wasAvoided) {
-            // Undo avoidance - subtract XP
+            // Undo avoidance - create negative transaction for undo
             console.log(`Undoing negative habit avoidance - removing ${xpToAdd} XP for: ${habit.name}`);
-            addBonusXP(-xpToAdd);
+            addXPTransaction('negative-habit', habit.id, habit.name, -xpToAdd);
             
             setProgress(prevProgress => ({
               ...prevProgress,
@@ -120,9 +152,9 @@ export function NegativeHabitsPanel() {
               level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
             }));
           } else {
-            // Mark as avoided - add XP
+            // Mark as avoided - add XP and create transaction for undo
             console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
-            addBonusXP(xpToAdd);
+            addXPTransaction('negative-habit', habit.id, habit.name, xpToAdd);
             
             setProgress(prevProgress => ({
               ...prevProgress,
@@ -155,7 +187,7 @@ export function NegativeHabitsPanel() {
         if (hadFailed) {
           // Undo failure - add back XP penalty
           console.log(`Undoing negative habit failure - adding back ${habit.xpPenalty} XP for: ${habit.name}`);
-          addBonusXP(habit.xpPenalty);
+          addXPTransaction('negative-habit', habit.id, habit.name, habit.xpPenalty);
           
           setProgress(prevProgress => ({
             ...prevProgress,
@@ -165,7 +197,7 @@ export function NegativeHabitsPanel() {
         } else {
           // Apply XP penalty for failure
           console.log(`Removing ${habit.xpPenalty} XP for failing negative habit: ${habit.name}`);
-          addBonusXP(-habit.xpPenalty);
+          addXPTransaction('negative-habit', habit.id, habit.name, -habit.xpPenalty);
           
           setProgress(prevProgress => ({
             ...prevProgress,
@@ -233,7 +265,20 @@ export function NegativeHabitsPanel() {
     return Math.round((completedSubtasks / habit.subtasks.length) * 100);
   };
 
-  const todaysHabits = negativeHabits.filter(shouldShowHabitToday);
+  // Get all negative habits that should show today (including recurring ones)
+  const getAllNegativeHabitsForToday = () => {
+    const todaysHabits: NegativeHabit[] = [];
+    
+    negativeHabits.forEach(habit => {
+      if (shouldShowHabitToday(habit)) {
+        todaysHabits.push(habit);
+      }
+    });
+    
+    return todaysHabits;
+  };
+
+  const todaysHabits = getAllNegativeHabitsForToday();
 
   return (
     <Card>
