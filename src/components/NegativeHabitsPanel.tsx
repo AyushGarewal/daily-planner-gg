@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,7 +16,6 @@ import { SubtaskManager } from './SubtaskManager';
 import { NegativeHabit, NegativeHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
-import { addXPTransaction } from './XPBar';
 
 export function NegativeHabitsPanel() {
   const [negativeHabits, setNegativeHabits] = useLocalStorage<NegativeHabit[]>('negativeHabits', []);
@@ -30,42 +29,11 @@ export function NegativeHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { progress, setProgress } = useTasks();
+  const { addBonusXP, progress, setProgress } = useTasks();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
-  const allCategories = [...CATEGORIES, ...customCategories.map(c => c.name)];
-
-  // Listen for undo events
-  useEffect(() => {
-    const handleXPUndo = (event: CustomEvent) => {
-      const { type, itemId, xpChange } = event.detail;
-      
-      if (type === 'negative-habit') {
-        // Find and update the negative habit
-        setNegativeHabits(prev => prev.map(habit => {
-          if (habit.id === itemId) {
-            return {
-              ...habit,
-              avoidedDates: habit.avoidedDates.filter(date => date !== today),
-              failedDates: habit.failedDates.filter(date => date !== today)
-            };
-          }
-          return habit;
-        }));
-        
-        // Reverse XP changes  
-        setProgress(prev => ({
-          ...prev,
-          totalXP: Math.max(0, prev.totalXP - xpChange),
-          level: Math.floor(Math.max(0, prev.totalXP - xpChange) / 100) + 1
-        }));
-      }
-    };
-
-    window.addEventListener('xp-undo', handleXPUndo as EventListener);
-    return () => window.removeEventListener('xp-undo', handleXPUndo as EventListener);
-  }, [setNegativeHabits, setProgress, today]);
+  const allCategories = [...CATEGORIES, ...customCategories];
 
   const addNegativeHabit = () => {
     console.log('Adding negative habit:', { newHabitName, newHabitCategory });
@@ -140,19 +108,28 @@ export function NegativeHabitsPanel() {
           xpToAdd = Math.round(habit.xpValue * completionPercentage);
         }
         
-        if (!wasAvoided && xpToAdd > 0) {
-          // Mark as avoided - add XP and integrate with main system
-          console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
-          
-          // Add XP transaction for undo functionality
-          addXPTransaction('negative-habit', habit.id, habit.name, xpToAdd);
-          
-          // Update main progress system
-          setProgress(prevProgress => ({
-            ...prevProgress,
-            totalXP: prevProgress.totalXP + xpToAdd,
-            level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
-          }));
+        if (xpToAdd > 0) {
+          if (wasAvoided) {
+            // Undo avoidance - subtract XP
+            console.log(`Undoing negative habit avoidance - removing ${xpToAdd} XP for: ${habit.name}`);
+            addBonusXP(-xpToAdd);
+            
+            setProgress(prevProgress => ({
+              ...prevProgress,
+              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
+              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
+            }));
+          } else {
+            // Mark as avoided - add XP
+            console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
+            addBonusXP(xpToAdd);
+            
+            setProgress(prevProgress => ({
+              ...prevProgress,
+              totalXP: prevProgress.totalXP + xpToAdd,
+              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+            }));
+          }
         }
         
         return updatedHabit;
@@ -175,14 +152,21 @@ export function NegativeHabitsPanel() {
             : habit.avoidedDates.filter(date => date !== today)
         };
         
-        if (!hadFailed) {
-          // Apply XP penalty for failure and integrate with main system
+        if (hadFailed) {
+          // Undo failure - add back XP penalty
+          console.log(`Undoing negative habit failure - adding back ${habit.xpPenalty} XP for: ${habit.name}`);
+          addBonusXP(habit.xpPenalty);
+          
+          setProgress(prevProgress => ({
+            ...prevProgress,
+            totalXP: prevProgress.totalXP + habit.xpPenalty,
+            level: Math.floor((prevProgress.totalXP + habit.xpPenalty) / 100) + 1
+          }));
+        } else {
+          // Apply XP penalty for failure
           console.log(`Removing ${habit.xpPenalty} XP for failing negative habit: ${habit.name}`);
+          addBonusXP(-habit.xpPenalty);
           
-          // Add XP transaction for undo functionality
-          addXPTransaction('negative-habit', habit.id, habit.name, -habit.xpPenalty);
-          
-          // Update main progress system
           setProgress(prevProgress => ({
             ...prevProgress,
             totalXP: Math.max(0, prevProgress.totalXP - habit.xpPenalty),
@@ -215,18 +199,12 @@ export function NegativeHabitsPanel() {
   };
 
   const shouldShowHabitToday = (habit: NegativeHabit) => {
-    // Always show habits with 'None' recurrence
     if (habit.recurrence === 'None') return true;
-    
-    // For Daily habits, show every day after creation
     if (habit.recurrence === 'Daily') return true;
-    
-    // For Weekly habits, check if today matches selected weekdays
     if (habit.recurrence === 'Weekly' && habit.weekDays) {
       const todayWeekday = getDay(new Date());
       return habit.weekDays.includes(todayWeekday);
     }
-    
     return true;
   };
 

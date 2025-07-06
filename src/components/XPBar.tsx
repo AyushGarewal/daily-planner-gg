@@ -31,7 +31,7 @@ export function XPBar({ progress, className = '' }: XPBarProps) {
 
   const recentTransactions = xpTransactions
     .filter(t => t.canUndo && new Date().getTime() - new Date(t.timestamp).getTime() < 24 * 60 * 60 * 1000) // Last 24 hours
-    .slice(-10) // Show more recent transactions
+    .slice(-5) // Last 5 transactions
     .reverse();
 
   const undoTransaction = (transactionId: string) => {
@@ -85,7 +85,7 @@ export function XPBar({ progress, className = '' }: XPBarProps) {
       {recentTransactions.length > 0 && (
         <div className="mt-4 pt-3 border-t">
           <h4 className="text-sm font-medium mb-2">Recent XP Changes</h4>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
+          <div className="space-y-1">
             {recentTransactions.map((transaction) => (
               <div key={transaction.id} className="flex items-center justify-between text-xs">
                 <div className="flex-1">
@@ -94,9 +94,6 @@ export function XPBar({ progress, className = '' }: XPBarProps) {
                   </span>
                   <span className={`ml-2 font-medium ${transaction.xpChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {transaction.xpChange > 0 ? '+' : ''}{transaction.xpChange} XP
-                  </span>
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    ({transaction.type})
                   </span>
                 </div>
                 <Button

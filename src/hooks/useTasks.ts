@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -87,35 +88,7 @@ export function useTasks() {
 
   const updateTask = (id: string, updates: Partial<Task>) => {
     setTasks(prev =>
-      prev.map(task => {
-        if (task.id === id) {
-          const updatedTask = { ...task, ...updates };
-          
-          // If this is a recurring task, update all future instances
-          if (task.recurrence !== 'None' && task.recurrence !== undefined) {
-            // Find other instances of this recurring task
-            const recurringTasks = prev.filter(t => 
-              t.title === task.title && 
-              t.recurrence === task.recurrence &&
-              t.id !== id &&
-              !t.completed // Only update incomplete future instances
-            );
-            
-            // Update all future instances with the same changes
-            recurringTasks.forEach(recurringTask => {
-              Object.assign(recurringTask, {
-                ...updates,
-                id: recurringTask.id, // Keep original ID
-                completed: recurringTask.completed, // Keep original completion status
-                completedAt: recurringTask.completedAt // Keep original completion time
-              });
-            });
-          }
-          
-          return updatedTask;
-        }
-        return task;
-      })
+      prev.map(task => (task.id === id ? { ...task, ...updates } : task))
     );
   };
 
@@ -189,25 +162,6 @@ export function useTasks() {
             return newProgress;
           });
           
-          // Handle recurring tasks - create next instance
-          if (task.recurrence !== 'None' && task.recurrence !== undefined) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            const nextTask: Task = {
-              ...task,
-              id: uuidv4(),
-              completed: false,
-              completedAt: undefined,
-              dueDate: tomorrow
-            };
-            
-            // Add the next instance
-            setTimeout(() => {
-              setTasks(currentTasks => [...currentTasks, nextTask]);
-            }, 100);
-          }
-          
           return { ...task, completed: true, completedAt: new Date() };
         }
         return task;
@@ -262,6 +216,7 @@ export function useTasks() {
     return Array.from(uniqueHabits.values());
   };
 
+  // Calculate today's completion percentage including partial subtask completion
   const getTodayCompletionPercentage = (): number => {
     const todaysTasks = getTodaysTasks();
     
