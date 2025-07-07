@@ -14,7 +14,7 @@ type SortBy = 'date' | 'completion' | 'xp';
 
 export function EnhancedWeeklyView() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc'); // FIXED: Default to descending (latest first)
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const { tasks, completeTask } = useTasks();
 
@@ -144,7 +144,7 @@ export function EnhancedWeeklyView() {
               className="flex items-center gap-2"
             >
               {getSortIcon()}
-              {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
+              {sortOrder === 'desc' ? 'Latest First' : 'Oldest First'}
             </Button>
           </div>
         </div>
