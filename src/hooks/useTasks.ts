@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -49,16 +48,12 @@ export function useTasks() {
   const { applyMultiplier } = useXPMultiplier();
   const { checkAndGenerateRecurringHabits, updateFutureHabitInstances, deleteRecurringInstances } = useHabitRecurrence();
 
-  // Generate recurring habits when tasks change or on app load - FIXED: Only run once
+  // Generate recurring habits when tasks change or on app load
   useEffect(() => {
-    const hasRunGeneration = localStorage.getItem('hasRunInitialGeneration');
-    if (!hasRunGeneration) {
-      const tasksWithRecurring = checkAndGenerateRecurringHabits(tasks);
-      if (tasksWithRecurring.length !== tasks.length) {
-        console.log(`Initial generation: Adding ${tasksWithRecurring.length - tasks.length} new recurring habit instances`);
-        setTasks(tasksWithRecurring);
-      }
-      localStorage.setItem('hasRunInitialGeneration', 'true');
+    const tasksWithRecurring = checkAndGenerateRecurringHabits(tasks);
+    if (tasksWithRecurring.length !== tasks.length) {
+      console.log(`Adding ${tasksWithRecurring.length - tasks.length} new recurring habit instances`);
+      setTasks(tasksWithRecurring);
     }
   }, []);
 
@@ -127,9 +122,9 @@ export function useTasks() {
     setTasks(prev => {
       const updatedTasks = [...prev, newTask];
       
-      // If it's a recurring habit, generate recurring instances starting from NEXT valid day
+      // If it's a recurring habit, generate recurring instances
       if (newTask.type === 'habit' && newTask.recurrence !== 'None') {
-        console.log('Generating recurring instances for new habit (starting from next valid day)');
+        console.log('Generating recurring instances for new habit');
         return checkAndGenerateRecurringHabits(updatedTasks);
       }
       
@@ -256,9 +251,6 @@ export function useTasks() {
                   : p.maxStreak;
               }
               
-              // Update level calculation
-              newProgress.level = Math.floor(newProgress.totalXP / 100) + 1;
-              
               console.log(`Progress updated:`, newProgress);
               return newProgress;
             });
@@ -269,7 +261,6 @@ export function useTasks() {
             setProgress(p => ({
               ...p,
               totalXP: Math.max(0, p.totalXP - finalXP),
-              level: Math.floor(Math.max(0, p.totalXP - finalXP) / 100) + 1,
               tasksCompleted: Math.max(0, p.tasksCompleted - 1),
               habitsCompleted: isHabit ? Math.max(0, p.habitsCompleted - 1) : p.habitsCompleted,
               currentStreak: shouldCountForStreak ? Math.max(0, p.currentStreak - 1) : p.currentStreak,
@@ -366,22 +357,14 @@ export function useTasks() {
   const getTodaysTasks = (): Task[] => {
     const today = new Date().toDateString();
     
-    // Filter out routine tasks from the main task list - FIXED: Deduplicate routine tasks
-    const todaysTasks = tasks.filter(task => {
+    // Filter out routine tasks from the main task list
+    return tasks.filter(task => {
       if (task.dueDate) {
         const dueDate = new Date(task.dueDate).toDateString();
-        return dueDate === today && !task.isRoutine;
+        return dueDate === today && !task.isRoutine; // Exclude routine tasks
       }
       return false;
     });
-
-    // Remove duplicates by task ID
-    const uniqueTasks = new Map();
-    todaysTasks.forEach(task => {
-      uniqueTasks.set(task.id, task);
-    });
-    
-    return Array.from(uniqueTasks.values());
   };
 
   const getVisibleTodaysTasks = (): Task[] => {
@@ -441,17 +424,17 @@ export function useTasks() {
     });
   };
 
-  // FIXED: Bonus XP should add exact amount without multiplier
   const addBonusXP = (amount: number) => {
-    console.log(`Adding bonus XP: ${amount} (no multiplier applied)`);
-    setBonusXP(prev => prev + amount);
+    // Apply multiplier to bonus XP
+    const multipliedAmount = applyMultiplier(amount);
+    setBonusXP(prev => prev + multipliedAmount);
     
-    // Add XP transaction for undo functionality
-    addXPTransaction('bonus', 'bonus', 'Bonus XP', amount);
+    // Add XP transaction
+    addXPTransaction('bonus', 'bonus', 'Bonus XP', multipliedAmount);
     
-    // Update progress stats immediately
+    // Update progress stats
     setProgress(prev => {
-      const newTotalXP = prev.totalXP + amount;
+      const newTotalXP = prev.totalXP + multipliedAmount;
       const newLevel = Math.floor(newTotalXP / 100) + 1;
       const leveledUp = newLevel > prev.level;
       
@@ -487,7 +470,7 @@ export function useTasks() {
     canUseDaily,
     markDailyUsed,
     setShowLevelUp,
-    setProgress,
+    setProgress, // Expose setProgress function
     getTodaysTasks,
     getTodayCompletionPercentage,
     shouldShowSurplusTasks,
