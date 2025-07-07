@@ -34,7 +34,7 @@ export function EnhancedWellnessCalendar() {
 
   const hasDataForDate = (date: Date) => {
     const { wellness, reflection } = getDataForDate(date);
-    return wellness || reflection;
+    return !!(wellness || reflection);
   };
 
   const getMoodEmoji = (mood: number) => {
@@ -92,7 +92,7 @@ export function EnhancedWellnessCalendar() {
               onSelect={setSelectedDate}
               className="rounded-md border"
               modifiers={{
-                hasData: (date) => hasDataForDate(date)
+                hasData: hasDataForDate
               }}
               modifiersStyles={{
                 hasData: {

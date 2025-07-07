@@ -71,6 +71,7 @@ const Index = () => {
     completeTask,
     toggleSubtask,
     addBonusXP,
+    removeBonusXP,
     canUseDaily,
     markDailyUsed,
     setShowLevelUp,
@@ -517,6 +518,23 @@ const Index = () => {
               </div>
             )}
 
+            {activeTab === 'inventory' && (
+              <div className="animate-fade-in">
+                <Inventory 
+                  powerUps={userStats.powerUps}
+                  streakShields={userStats.streakShields}
+                  bonusXP={bonusXP}
+                  tasks={getVisibleTodaysTasks()}
+                  canUseDaily={canUseDaily}
+                  onUsePowerUp={handleUsePowerUp}
+                  onUseStreakShield={handleUseStreakShield}
+                  onUseXPBoost={handleUseXPBoost}
+                  onAutoCompleteTask={handleAutoCompleteTask}
+                  onRemoveBonusXP={removeBonusXP}
+                />
+              </div>
+            )}
+
             {activeTab === 'monthly' && (
               <div className="animate-fade-in">
                 <MonthlyTasksView />
@@ -658,22 +676,6 @@ const Index = () => {
                     <EnhancedHabitPerformanceCalendar />
                   </TabsContent>
                 </Tabs>
-              </div>
-            )}
-
-            {activeTab === 'inventory' && (
-              <div className="animate-fade-in">
-                <Inventory 
-                  powerUps={userStats.powerUps}
-                  streakShields={userStats.streakShields}
-                  bonusXP={bonusXP}
-                  tasks={getVisibleTodaysTasks()}
-                  canUseDaily={canUseDaily}
-                  onUsePowerUp={handleUsePowerUp}
-                  onUseStreakShield={handleUseStreakShield}
-                  onUseXPBoost={handleUseXPBoost}
-                  onAutoCompleteTask={handleAutoCompleteTask}
-                />
               </div>
             )}
 
