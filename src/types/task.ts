@@ -6,7 +6,7 @@ export interface Task {
   subtasks: Subtask[];
   dueDate: Date;
   priority: 'High' | 'Medium' | 'Low';
-  recurrence: 'None' | 'Daily' | 'Weekly' | 'Monthly';
+  recurrence: 'None' | 'Daily' | 'Weekly' | 'Custom';
   xpValue: number;
   category: string;
   completed: boolean;
@@ -21,6 +21,14 @@ export interface Task {
   goalId?: string; // Link to long-term goal
   customCategory?: string; // Custom category name
   numericTarget?: number; // For habits - target number of completions
+  
+  // New recurrence fields
+  customFrequency?: number; // For "N times per week" recurrence
+  baseHabitId?: string; // Link to the original habit for recurring instances
+  isRecurringInstance?: boolean; // Flag to identify auto-generated instances
+  parentHabitId?: string; // Parent habit for recurring instances
+  recurringWeeklyCount?: number; // Track completions for weekly custom frequency
+  weekStartDate?: Date; // Track the start of the week for custom frequency
 }
 
 export interface Subtask {

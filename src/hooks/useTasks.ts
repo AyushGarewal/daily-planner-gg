@@ -5,6 +5,7 @@ import { useLocalStorage } from './useLocalStorage';
 import { v4 as uuidv4 } from 'uuid';
 import { useXPMultiplier } from './useXPMultiplier';
 import { addXPTransaction } from '../components/XPBar';
+import { useHabitRecurrence } from './useHabitRecurrence';
 
 interface Progress {
   totalXP: number;
@@ -46,6 +47,39 @@ export function useTasks() {
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   
   const { applyMultiplier } = useXPMultiplier();
+  const { checkAndGenerateRecurringHabits, updateFutureHabitInstances } = useHabitRecurrence();
+
+  // Generate recurring habits when tasks change or on app load
+  useEffect(() => {
+    const tasksWithRecurring = checkAndGenerateRecurringHabits(tasks);
+    if (tasksWithRecurring.length !== tasks.length) {
+      console.log(`Adding ${tasksWithRecurring.length - tasks.length} new recurring habit instances`);
+      setTasks(tasksWithRecurring);
+    }
+  }, []);
+
+  // Generate recurring habits daily at midnight
+  useEffect(() => {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const timeUntilMidnight = midnight.getTime() - now.getTime();
+
+    const timeoutId = setTimeout(() => {
+      console.log('Generating recurring habits for new day');
+      setTasks(prev => checkAndGenerateRecurringHabits(prev));
+      
+      // Reset daily usage
+      setDailyUsage({
+        autoComplete: false,
+        skipToken: false,
+        streakShield: false,
+        spinUsed: false,
+      });
+    }, timeUntilMidnight);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Listen for undo events
   useEffect(() => {
@@ -83,17 +117,70 @@ export function useTasks() {
       ...taskData,
       completed: false,
     };
-    setTasks(prev => [...prev, newTask]);
+    
+    console.log('Adding new task/habit:', newTask);
+    
+    setTasks(prev => {
+      const updatedTasks = [...prev, newTask];
+      
+      // If it's a recurring habit, generate recurring instances
+      if (newTask.type === 'habit' && newTask.recurrence !== 'None') {
+        console.log('Generating recurring instances for new habit');
+        return checkAndGenerateRecurringHabits(updatedTasks);
+      }
+      
+      return updatedTasks;
+    });
   };
 
   const updateTask = (id: string, updates: Partial<Task>) => {
-    setTasks(prev =>
-      prev.map(task => (task.id === id ? { ...task, ...updates } : task))
-    );
+    console.log(`Updating task ${id}:`, updates);
+    
+    setTasks(prev => {
+      const updatedTasks = prev.map(task => {
+        if (task.id === id) {
+          const updatedTask = { ...task, ...updates };
+          
+          // If this is a base habit (not a recurring instance) and it's being updated
+          if (task.type === 'habit' && !task.isRecurringInstance) {
+            console.log('Updating base habit, will sync future instances');
+            
+            // Update this task and then sync future instances
+            const tasksWithUpdatedBase = prev.map(t => t.id === id ? updatedTask : t);
+            const tasksWithSyncedFuture = updateFutureHabitInstances(updatedTask, tasksWithUpdatedBase);
+            
+            return tasksWithSyncedFuture;
+          }
+          
+          return updatedTask;
+        }
+        return task;
+      });
+      
+      // If the updated task was a base habit, the sync already happened above
+      // For other cases, just return the updated tasks
+      return updatedTasks.some(task => task.id === id && task.type === 'habit' && !task.isRecurringInstance) 
+        ? updatedTasks  // The sync already happened in the map above
+        : updatedTasks;
+    });
   };
 
   const deleteTask = (id: string) => {
-    setTasks(prev => prev.filter(task => task.id !== id));
+    setTasks(prev => {
+      const taskToDelete = prev.find(task => task.id === id);
+      
+      if (taskToDelete?.type === 'habit' && !taskToDelete.isRecurringInstance) {
+        // If deleting a base habit, also delete all its recurring instances
+        console.log('Deleting base habit and all its recurring instances');
+        return prev.filter(task => 
+          task.id !== id && 
+          task.parentHabitId !== id
+        );
+      }
+      
+      // For other tasks or recurring instances, just delete the specific task
+      return prev.filter(task => task.id !== id);
+    });
   };
 
   const completeTask = (id: string) => {
@@ -202,16 +289,19 @@ export function useTasks() {
   };
 
   const getUserHabits = (): Task[] => {
+    // Get base habits (not recurring instances) and remove duplicates
+    const baseHabits = tasks.filter(task => 
+      task.type === 'habit' && !task.isRecurringInstance
+    );
+    
     // Remove duplicates by creating a Map with unique titles
     const uniqueHabits = new Map();
     
-    tasks
-      .filter(task => task.type === 'habit')
-      .forEach(habit => {
-        if (!uniqueHabits.has(habit.title) || !uniqueHabits.get(habit.title).completed) {
-          uniqueHabits.set(habit.title, habit);
-        }
-      });
+    baseHabits.forEach(habit => {
+      if (!uniqueHabits.has(habit.title) || !uniqueHabits.get(habit.title).completed) {
+        uniqueHabits.set(habit.title, habit);
+      }
+    });
     
     return Array.from(uniqueHabits.values());
   };
@@ -239,25 +329,6 @@ export function useTasks() {
     console.log(`Total completion: ${totalProgress}/${todaysTasks.length} = ${finalPercentage}%`);
     return finalPercentage;
   };
-
-  useEffect(() => {
-    // Reset daily usage at midnight
-    const now = new Date();
-    const midnight = new Date(now);
-    midnight.setHours(24, 0, 0, 0);
-    const timeUntilMidnight = midnight.getTime() - now.getTime();
-
-    const timeoutId = setTimeout(() => {
-      setDailyUsage({
-        autoComplete: false,
-        skipToken: false,
-        streakShield: false,
-        spinUsed: false,
-      });
-    }, timeUntilMidnight);
-
-    return () => clearTimeout(timeoutId);
-  }, []);
 
   const getTodaysTasks = (): Task[] => {
     const today = new Date().toDateString();

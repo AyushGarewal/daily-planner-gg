@@ -11,7 +11,7 @@ import { CalendarIcon, Plus, X, FolderOpen, Target } from 'lucide-react';
 import { format } from 'date-fns';
 import { Task, CATEGORIES, Subtask } from '../types/task';
 import { TaskTypeSelector } from './TaskTypeSelector';
-import { WeekdaySelector } from './WeekdaySelector';
+import { RecurrenceSelector } from './RecurrenceSelector';
 import { cn } from '@/lib/utils';
 
 interface TaskFormProps {
@@ -29,11 +29,12 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
   const [subtasks, setSubtasks] = useState<Subtask[]>(initialTask?.subtasks || []);
   const [dueDate, setDueDate] = useState<Date>(initialTask?.dueDate ? new Date(initialTask.dueDate) : new Date());
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>(initialTask?.priority || 'Medium');
-  const [recurrence, setRecurrence] = useState<'None' | 'Daily' | 'Weekly' | 'Monthly'>(initialTask?.recurrence || 'None');
+  const [recurrence, setRecurrence] = useState<'None' | 'Daily' | 'Weekly' | 'Custom'>(initialTask?.recurrence || 'None');
   const [xpValue, setXpValue] = useState(initialTask?.xpValue || 10);
   const [category, setCategory] = useState(initialTask?.category || 'Personal');
   const [taskTypeField, setTaskTypeField] = useState<'normal' | 'surplus'>(initialTask?.taskType || 'normal');
   const [weekDays, setWeekDays] = useState<number[]>(initialTask?.weekDays || []);
+  const [customFrequency, setCustomFrequency] = useState<number>(initialTask?.customFrequency || 1);
   const [newSubtask, setNewSubtask] = useState('');
   const [showTypeSelector, setShowTypeSelector] = useState(!initialTask);
   const [projectId, setProjectId] = useState(initialTask?.projectId || preSelectedProjectId || '');
@@ -89,9 +90,15 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
       return;
     }
 
+    // Validation for custom frequency habits
+    if (taskType === 'habit' && recurrence === 'Custom' && (!customFrequency || customFrequency < 1 || customFrequency > 7)) {
+      alert('Please enter a valid frequency (1-7 times per week)');
+      return;
+    }
+
     // Set appropriate due date for habits created today
     const submissionDate = new Date(dueDate);
-    if (taskType === 'habit' && recurrence === 'Daily') {
+    if (taskType === 'habit' && recurrence !== 'None') {
       submissionDate.setHours(new Date().getHours(), new Date().getMinutes());
     }
 
@@ -107,8 +114,10 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
       taskType: taskTypeField,
       type: taskType,
       weekDays: taskType === 'habit' && recurrence === 'Weekly' ? weekDays : undefined,
+      customFrequency: taskType === 'habit' && recurrence === 'Custom' ? customFrequency : undefined,
       projectId: projectId || undefined,
       goalId: goalId || undefined,
+      isRecurringInstance: false, // Base habits are never recurring instances
     };
 
     console.log('Submitting task data:', taskData);
@@ -210,6 +219,21 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
           </div>
         </div>
 
+        {/* Recurrence Section for Habits */}
+        {taskType === 'habit' && (
+          <div className="p-4 border rounded-lg bg-muted/20">
+            <RecurrenceSelector
+              recurrence={recurrence}
+              onRecurrenceChange={setRecurrence}
+              weekDays={weekDays}
+              onWeekDaysChange={setWeekDays}
+              customFrequency={customFrequency}
+              onCustomFrequencyChange={setCustomFrequency}
+              taskType={taskType}
+            />
+          </div>
+        )}
+
         {/* Project and Goal Linking Section */}
         <div className="grid grid-cols-1 gap-4 p-4 border rounded-lg bg-muted/20">
           <h3 className="text-sm font-semibold mb-2">Link to Projects & Goals</h3>
@@ -290,7 +314,9 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
         {/* Date and Priority */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Due Date</label>
+            <label className="block text-sm font-medium mb-1">
+              {taskType === 'habit' && recurrence !== 'None' ? 'Start Date' : 'Due Date'}
+            </label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -313,6 +339,11 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
                 />
               </PopoverContent>
             </Popover>
+            {taskType === 'habit' && recurrence !== 'None' && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Recurring habits will appear automatically based on your schedule
+              </p>
+            )}
           </div>
 
           <div>
@@ -330,86 +361,47 @@ export function TaskForm({ onSubmit, onCancel, initialTask, preSelectedProjectId
           </div>
         </div>
 
-        {/* Habit-specific fields */}
-        {taskType === 'habit' && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Recurrence</label>
-                <Select value={recurrence} onValueChange={(value: 'None' | 'Daily' | 'Weekly' | 'Monthly') => setRecurrence(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Daily">Daily</SelectItem>
-                    <SelectItem value="Weekly">Weekly</SelectItem>
-                    <SelectItem value="Monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Category and XP Value */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Category</label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">XP Value</label>
-                <Input
-                  type="number"
-                  value={xpValue}
-                  onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
-                  min="1"
-                  max="100"
-                />
-              </div>
-            </div>
-
-            {recurrence === 'Weekly' && (
-              <WeekdaySelector
-                selectedDays={weekDays}
-                onChange={setWeekDays}
-              />
-            )}
-          </>
-        )}
-
-        {/* Category Selection */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <label className="block text-sm font-medium mb-1">XP Value</label>
+            <Input
+              type="number"
+              value={xpValue}
+              onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
+              min="1"
+              max="100"
+            />
+          </div>
         </div>
 
         {/* Task-specific fields */}
         {taskType === 'task' && (
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">XP Value</label>
-              <Input
-                type="number"
-                value={xpValue}
-                onChange={(e) => setXpValue(parseInt(e.target.value) || 0)}
-                min="1"
-                max="100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Task Type</label>
-              <Select value={taskTypeField} onValueChange={(value: 'normal' | 'surplus') => setTaskTypeField(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="surplus">Surplus</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Task Type</label>
+            <Select value={taskTypeField} onValueChange={(value: 'normal' | 'surplus') => setTaskTypeField(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="surplus">Surplus</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
