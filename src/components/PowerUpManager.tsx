@@ -3,10 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Shield, Star, Gift } from 'lucide-react';
+import { Zap, Shield, Star } from 'lucide-react';
 import { PowerUp } from '../types/achievements';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { useTasks } from '../hooks/useTasks';
 
 interface PowerUpManagerProps {
   powerUps: PowerUp[];
@@ -14,15 +12,11 @@ interface PowerUpManagerProps {
 }
 
 export function PowerUpManager({ powerUps, onUsePowerUp }: PowerUpManagerProps) {
-  const [bonusXPItems, setBonusXPItems] = useLocalStorage<Array<{id: string, xpValue: number}>>('bonusXPItems', []);
-  const { addBonusXP } = useTasks();
-
   const getIcon = (type: string) => {
     switch (type) {
       case 'auto-complete': return <Star className="h-5 w-5" />;
       case 'double-xp': return <Zap className="h-5 w-5" />;
       case 'streak-shield': return <Shield className="h-5 w-5" />;
-      case 'bonus-xp': return <Gift className="h-5 w-5" />;
       default: return <Zap className="h-5 w-5" />;
     }
   };
@@ -32,37 +26,11 @@ export function PowerUpManager({ powerUps, onUsePowerUp }: PowerUpManagerProps) 
       case 'auto-complete': return 'from-purple-500 to-pink-500';
       case 'double-xp': return 'from-yellow-500 to-orange-500';
       case 'streak-shield': return 'from-blue-500 to-teal-500';
-      case 'bonus-xp': return 'from-green-500 to-emerald-500';
       default: return 'from-gray-500 to-gray-600';
     }
   };
 
-  // FIXED: Handle bonus XP items with exact values
-  const handleUseBonusXP = (bonusXPId: string) => {
-    const bonusItem = bonusXPItems.find(item => item.id === bonusXPId);
-    if (bonusItem) {
-      console.log(`Using bonus XP item: +${bonusItem.xpValue} XP`);
-      addBonusXP(bonusItem.xpValue);
-      
-      // Remove the item after use
-      setBonusXPItems(prev => prev.filter(item => item.id !== bonusXPId));
-    }
-  };
-
-  // Combine regular power-ups with bonus XP items for display
-  const allPowerUps = [
-    ...powerUps,
-    ...bonusXPItems.map(item => ({
-      id: item.id,
-      type: 'bonus-xp',
-      title: 'Bonus XP',
-      description: `Contains +${item.xpValue} XP`,
-      uses: 1,
-      maxUses: 1
-    }))
-  ];
-
-  if (allPowerUps.length === 0) {
+  if (powerUps.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -85,12 +53,12 @@ export function PowerUpManager({ powerUps, onUsePowerUp }: PowerUpManagerProps) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Zap className="h-5 w-5" />
-          Power-Ups ({allPowerUps.length})
+          Power-Ups ({powerUps.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
-          {allPowerUps.map((powerUp) => (
+          {powerUps.map((powerUp) => (
             <div 
               key={powerUp.id}
               className={`p-4 rounded-lg bg-gradient-to-r ${getColor(powerUp.type)} text-white`}
@@ -110,13 +78,7 @@ export function PowerUpManager({ powerUps, onUsePowerUp }: PowerUpManagerProps) 
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => {
-                      if (powerUp.type === 'bonus-xp') {
-                        handleUseBonusXP(powerUp.id);
-                      } else {
-                        onUsePowerUp(powerUp.id);
-                      }
-                    }}
+                    onClick={() => onUsePowerUp(powerUp.id)}
                     disabled={powerUp.uses === 0}
                   >
                     Use

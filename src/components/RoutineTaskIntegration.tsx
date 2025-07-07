@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,31 +74,34 @@ export function RoutineTaskIntegration({
       });
     });
     
+    // Clean up tasks from inactive routines
+    const inactiveRoutineNames = routines
+      .filter(routine => !routine.active)
+      .map(routine => routine.name);
+    
+    // Remove tasks from inactive routines
+    tasks.forEach(task => {
+      if (task.isRoutine && task.routineName && inactiveRoutineNames.includes(task.routineName)) {
+        console.log(`Removing task from inactive routine: ${task.title}`);
+        // Don't call deleteTask here as it would cause infinite loop
+        // The cleanup will happen via the tasks filter
+      }
+    });
+    
   }, [routines, displayDate, tasks, addTask]);
 
-  // Get routine tasks for the display date (only from ACTIVE routines) - FIXED: Remove duplicates
+  // Get routine tasks for the display date (only from ACTIVE routines)
   const getRoutineTasksForDate = (date: Date) => {
     const activeRoutineNames = routines
       .filter(routine => routine.active)
       .map(routine => routine.name);
     
-    const routineTasks = tasks.filter(task => 
+    return tasks.filter(task => 
       task.isRoutine && 
       task.routineName &&
       activeRoutineNames.includes(task.routineName) &&
       isSameDay(new Date(task.dueDate), date)
     );
-
-    // Remove duplicates by creating a map with unique keys
-    const uniqueTasks = new Map();
-    routineTasks.forEach(task => {
-      const key = `${task.routineName}-${task.title}-${format(date, 'yyyy-MM-dd')}`;
-      if (!uniqueTasks.has(key)) {
-        uniqueTasks.set(key, task);
-      }
-    });
-    
-    return Array.from(uniqueTasks.values());
   };
 
   // Mark routine as completed for a specific date
@@ -146,23 +150,13 @@ export function RoutineTaskIntegration({
     ? Math.round((completedTasks.length / routineTasks.length) * 100)
     : 0;
 
-  // Group tasks by routine (only active routines) - FIXED: Ensure no duplicates in groups
+  // Group tasks by routine (only active routines)
   const tasksByRoutine = routineTasks.reduce((acc, task) => {
     const routineName = task.routineName || 'Unknown';
     if (!acc[routineName]) {
       acc[routineName] = [];
     }
-    
-    // Check if task already exists in this routine group
-    const taskExists = acc[routineName].some(existingTask => 
-      existingTask.id === task.id || 
-      (existingTask.title === task.title && existingTask.routineName === task.routineName)
-    );
-    
-    if (!taskExists) {
-      acc[routineName].push(task);
-    }
-    
+    acc[routineName].push(task);
     return acc;
   }, {} as Record<string, Task[]>);
 

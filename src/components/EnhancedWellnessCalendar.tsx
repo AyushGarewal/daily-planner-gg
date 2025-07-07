@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import { CalendarDays, BookOpen, Heart, TrendingUp } from 'lucide-react';
 import { useDailyReflections } from '../hooks/useDailyReflections';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -103,7 +105,7 @@ export function EnhancedWellnessCalendar() {
             <div className="mt-2 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 bg-green-500 rounded"></div>
-                <span>Days with wellness data or reflections</span>
+                <span>Days with wellness data</span>
               </div>
             </div>
           </div>
@@ -123,7 +125,7 @@ export function EnhancedWellnessCalendar() {
                     if (!wellness && !reflection) {
                       return (
                         <div className="text-center py-8 text-muted-foreground">
-                          <p className="text-sm">No wellness data or reflections for this date</p>
+                          <p className="text-sm">No wellness data for this date</p>
                         </div>
                       );
                     }
@@ -201,7 +203,7 @@ export function EnhancedWellnessCalendar() {
                               {reflection.content && (
                                 <div>
                                   <p className="text-sm text-muted-foreground mb-1">Reflection:</p>
-                                  <p className="text-sm leading-relaxed">{reflection.content}</p>
+                                  <p className="text-sm">{reflection.content}</p>
                                 </div>
                               )}
                               
