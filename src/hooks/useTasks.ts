@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -137,31 +136,22 @@ export function useTasks() {
     console.log(`Updating task ${id}:`, updates);
     
     setTasks(prev => {
+      // First, update the specific task
       const updatedTasks = prev.map(task => {
         if (task.id === id) {
-          const updatedTask = { ...task, ...updates };
-          
-          // If this is a base habit (not a recurring instance) and it's being updated
-          if (task.type === 'habit' && !task.isRecurringInstance) {
-            console.log('Updating base habit, will sync future instances');
-            
-            // Update this task and then sync future instances
-            const tasksWithUpdatedBase = prev.map(t => t.id === id ? updatedTask : t);
-            const tasksWithSyncedFuture = updateFutureHabitInstances(updatedTask, tasksWithUpdatedBase);
-            
-            return tasksWithSyncedFuture;
-          }
-          
-          return updatedTask;
+          return { ...task, ...updates };
         }
         return task;
       });
       
-      // If the updated task was a base habit, the sync already happened above
-      // For other cases, just return the updated tasks
-      return updatedTasks.some(task => task.id === id && task.type === 'habit' && !task.isRecurringInstance) 
-        ? updatedTasks  // The sync already happened in the map above
-        : updatedTasks;
+      // Check if we updated a base habit that needs future sync
+      const updatedTask = updatedTasks.find(task => task.id === id);
+      if (updatedTask && updatedTask.type === 'habit' && !updatedTask.isRecurringInstance) {
+        console.log('Updating base habit, will sync future instances');
+        return updateFutureHabitInstances(updatedTask, updatedTasks);
+      }
+      
+      return updatedTasks;
     });
   };
 
