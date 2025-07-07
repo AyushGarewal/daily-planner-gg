@@ -34,7 +34,7 @@ export function NegativeHabitsPanel() {
   const today = new Date().toDateString();
 
   // Combine default and custom categories
-  const allCategories = [...CATEGORIES, ...customCategories.map(cat => cat.name)];
+  const allCategories = [...CATEGORIES, ...customCategories.map(c => c.name)];
 
   // Listen for undo events
   useEffect(() => {
@@ -140,28 +140,19 @@ export function NegativeHabitsPanel() {
           xpToAdd = Math.round(habit.xpValue * completionPercentage);
         }
         
-        if (xpToAdd > 0) {
-          if (wasAvoided) {
-            // Undo avoidance - create negative transaction for undo
-            console.log(`Undoing negative habit avoidance - removing ${xpToAdd} XP for: ${habit.name}`);
-            addXPTransaction('negative-habit', habit.id, habit.name, -xpToAdd);
-            
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
-              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
-            }));
-          } else {
-            // Mark as avoided - add XP and create transaction for undo
-            console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
-            addXPTransaction('negative-habit', habit.id, habit.name, xpToAdd);
-            
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: prevProgress.totalXP + xpToAdd,
-              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
-            }));
-          }
+        if (!wasAvoided && xpToAdd > 0) {
+          // Mark as avoided - add XP and integrate with main system
+          console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
+          
+          // Add XP transaction for undo functionality
+          addXPTransaction('negative-habit', habit.id, habit.name, xpToAdd);
+          
+          // Update main progress system
+          setProgress(prevProgress => ({
+            ...prevProgress,
+            totalXP: prevProgress.totalXP + xpToAdd,
+            level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+          }));
         }
         
         return updatedHabit;
@@ -184,21 +175,14 @@ export function NegativeHabitsPanel() {
             : habit.avoidedDates.filter(date => date !== today)
         };
         
-        if (hadFailed) {
-          // Undo failure - add back XP penalty
-          console.log(`Undoing negative habit failure - adding back ${habit.xpPenalty} XP for: ${habit.name}`);
-          addXPTransaction('negative-habit', habit.id, habit.name, habit.xpPenalty);
-          
-          setProgress(prevProgress => ({
-            ...prevProgress,
-            totalXP: prevProgress.totalXP + habit.xpPenalty,
-            level: Math.floor((prevProgress.totalXP + habit.xpPenalty) / 100) + 1
-          }));
-        } else {
-          // Apply XP penalty for failure
+        if (!hadFailed) {
+          // Apply XP penalty for failure and integrate with main system
           console.log(`Removing ${habit.xpPenalty} XP for failing negative habit: ${habit.name}`);
+          
+          // Add XP transaction for undo functionality
           addXPTransaction('negative-habit', habit.id, habit.name, -habit.xpPenalty);
           
+          // Update main progress system
           setProgress(prevProgress => ({
             ...prevProgress,
             totalXP: Math.max(0, prevProgress.totalXP - habit.xpPenalty),
@@ -231,12 +215,18 @@ export function NegativeHabitsPanel() {
   };
 
   const shouldShowHabitToday = (habit: NegativeHabit) => {
+    // Always show habits with 'None' recurrence
     if (habit.recurrence === 'None') return true;
+    
+    // For Daily habits, show every day after creation
     if (habit.recurrence === 'Daily') return true;
+    
+    // For Weekly habits, check if today matches selected weekdays
     if (habit.recurrence === 'Weekly' && habit.weekDays) {
       const todayWeekday = getDay(new Date());
       return habit.weekDays.includes(todayWeekday);
     }
+    
     return true;
   };
 
@@ -265,20 +255,7 @@ export function NegativeHabitsPanel() {
     return Math.round((completedSubtasks / habit.subtasks.length) * 100);
   };
 
-  // Get all negative habits that should show today (including recurring ones)
-  const getAllNegativeHabitsForToday = () => {
-    const todaysHabits: NegativeHabit[] = [];
-    
-    negativeHabits.forEach(habit => {
-      if (shouldShowHabitToday(habit)) {
-        todaysHabits.push(habit);
-      }
-    });
-    
-    return todaysHabits;
-  };
-
-  const todaysHabits = getAllNegativeHabitsForToday();
+  const todaysHabits = negativeHabits.filter(shouldShowHabitToday);
 
   return (
     <Card>

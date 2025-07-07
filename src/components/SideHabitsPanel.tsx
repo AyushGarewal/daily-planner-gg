@@ -15,7 +15,7 @@ import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
-import { getDay } from 'date-fns';
+import { getDay, isToday, parseISO } from 'date-fns';
 import { addXPTransaction } from './XPBar';
 
 export function SideHabitsPanel() {
@@ -33,7 +33,7 @@ export function SideHabitsPanel() {
   const today = new Date().toDateString();
 
   // Combine default and custom categories
-  const allCategories = [...CATEGORIES, ...customCategories.map(cat => cat.name)];
+  const allCategories = [...CATEGORIES, ...customCategories.map(c => c.name)];
 
   // Listen for undo events
   useEffect(() => {
@@ -132,28 +132,19 @@ export function SideHabitsPanel() {
           xpToAdd = Math.round((habit.xpValue || 0) * completionPercentage);
         }
         
-        if (xpToAdd > 0) {
-          if (wasCompleted) {
-            // Undo completion - create negative transaction for undo
-            console.log(`Undoing side habit completion - removing ${xpToAdd} XP for: ${habit.name}`);
-            addXPTransaction('side-habit', habit.id, habit.name, -xpToAdd);
-            
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
-              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
-            }));
-          } else {
-            // Complete habit - add XP and create transaction for undo
-            console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
-            addXPTransaction('side-habit', habit.id, habit.name, xpToAdd);
-            
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: prevProgress.totalXP + xpToAdd,
-              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
-            }));
-          }
+        if (!wasCompleted && xpToAdd > 0) {
+          // Complete habit - add XP and integrate with main system
+          console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
+          
+          // Add XP transaction for undo functionality
+          addXPTransaction('side-habit', habit.id, habit.name, xpToAdd);
+          
+          // Update main progress system
+          setProgress(prevProgress => ({
+            ...prevProgress,
+            totalXP: prevProgress.totalXP + xpToAdd,
+            level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+          }));
         }
         
         return updatedHabit;
@@ -181,12 +172,18 @@ export function SideHabitsPanel() {
   };
 
   const shouldShowHabitToday = (habit: SideHabit) => {
+    // Always show habits with 'None' recurrence
     if (habit.recurrence === 'None') return true;
+    
+    // For Daily habits, show every day after creation
     if (habit.recurrence === 'Daily') return true;
+    
+    // For Weekly habits, check if today matches selected weekdays
     if (habit.recurrence === 'Weekly' && habit.weekDays) {
       const todayWeekday = getDay(new Date());
       return habit.weekDays.includes(todayWeekday);
     }
+    
     return true;
   };
 
@@ -215,20 +212,7 @@ export function SideHabitsPanel() {
     return Math.round((completedSubtasks / habit.subtasks.length) * 100);
   };
 
-  // Get all side habits that should show today (including recurring ones)
-  const getAllSideHabitsForToday = () => {
-    const todaysHabits: SideHabit[] = [];
-    
-    sideHabits.forEach(habit => {
-      if (shouldShowHabitToday(habit)) {
-        todaysHabits.push(habit);
-      }
-    });
-    
-    return todaysHabits;
-  };
-
-  const todaysHabits = getAllSideHabitsForToday();
+  const todaysHabits = sideHabits.filter(shouldShowHabitToday);
 
   return (
     <Card>

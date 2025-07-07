@@ -4,21 +4,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WaterCalorieTracker } from './WaterCalorieTracker';
 import { MoodTracker } from './MoodTracker';
 import { ChallengeSystem } from './ChallengeSystem';
-import { CustomCategoryManager } from './CustomCategoryManager';
+import { CustomCategoriesManager } from './CustomCategoriesManager';
 
 export function EnhancedWellnessLogging() {
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Wellness & Habits</h2>
-        <CustomCategoryManager defaultType="habit" />
-      </div>
-      
       <Tabs defaultValue="water-calories" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="water-calories">Water & Calories</TabsTrigger>
           <TabsTrigger value="mood">Mood Tracking</TabsTrigger>
           <TabsTrigger value="challenges">Challenges</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
         </TabsList>
         
         <TabsContent value="water-calories">
@@ -31,6 +27,10 @@ export function EnhancedWellnessLogging() {
         
         <TabsContent value="challenges">
           <ChallengeSystem />
+        </TabsContent>
+        
+        <TabsContent value="categories">
+          <CustomCategoriesManager />
         </TabsContent>
       </Tabs>
     </div>
