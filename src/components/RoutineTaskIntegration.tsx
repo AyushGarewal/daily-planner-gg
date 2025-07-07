@@ -32,13 +32,16 @@ export function RoutineTaskIntegration({
   
   const displayDate = targetDate || new Date();
   
-  // Generate routine tasks for active routines
+  // Generate routine tasks for ACTIVE routines only
   useEffect(() => {
     const today = startOfDay(displayDate);
     const todayWeekday = getDay(today);
     
-    routines.forEach(routine => {
-      if (!routine.active || !routine.daysOfWeek.includes(todayWeekday)) return;
+    // Only process ACTIVE routines
+    const activeRoutines = routines.filter(routine => routine.active);
+    
+    activeRoutines.forEach(routine => {
+      if (!routine.daysOfWeek.includes(todayWeekday)) return;
       
       routine.habits.forEach(routineHabit => {
         // Check if task already exists for this date
@@ -70,12 +73,33 @@ export function RoutineTaskIntegration({
         }
       });
     });
+    
+    // Clean up tasks from inactive routines
+    const inactiveRoutineNames = routines
+      .filter(routine => !routine.active)
+      .map(routine => routine.name);
+    
+    // Remove tasks from inactive routines
+    tasks.forEach(task => {
+      if (task.isRoutine && task.routineName && inactiveRoutineNames.includes(task.routineName)) {
+        console.log(`Removing task from inactive routine: ${task.title}`);
+        // Don't call deleteTask here as it would cause infinite loop
+        // The cleanup will happen via the tasks filter
+      }
+    });
+    
   }, [routines, displayDate, tasks, addTask]);
 
-  // Get routine tasks for the display date
+  // Get routine tasks for the display date (only from ACTIVE routines)
   const getRoutineTasksForDate = (date: Date) => {
+    const activeRoutineNames = routines
+      .filter(routine => routine.active)
+      .map(routine => routine.name);
+    
     return tasks.filter(task => 
       task.isRoutine && 
+      task.routineName &&
+      activeRoutineNames.includes(task.routineName) &&
       isSameDay(new Date(task.dueDate), date)
     );
   };
@@ -126,7 +150,7 @@ export function RoutineTaskIntegration({
     ? Math.round((completedTasks.length / routineTasks.length) * 100)
     : 0;
 
-  // Group tasks by routine
+  // Group tasks by routine (only active routines)
   const tasksByRoutine = routineTasks.reduce((acc, task) => {
     const routineName = task.routineName || 'Unknown';
     if (!acc[routineName]) {
@@ -159,7 +183,10 @@ export function RoutineTaskIntegration({
             <div className="space-y-3">
               {Object.entries(tasksByRoutine).map(([routineName, tasks]) => {
                 const routineCompleted = tasks.every(t => t.completed);
-                const routine = routines.find(r => r.name === routineName);
+                const routine = routines.find(r => r.name === routineName && r.active);
+                
+                // Only show if routine is still active
+                if (!routine) return null;
                 
                 return (
                   <div key={routineName} className={`border rounded-lg p-3 ${
@@ -187,7 +214,6 @@ export function RoutineTaskIntegration({
                             size="sm"
                             className="p-0 h-5 w-5"
                             onClick={() => handleCompleteTask(task.id)}
-                            disabled={task.completed}
                           >
                             {task.completed ? (
                               <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -271,7 +297,10 @@ export function RoutineTaskIntegration({
           <div className="space-y-4">
             {Object.entries(tasksByRoutine).map(([routineName, tasks]) => {
               const routineCompleted = tasks.every(t => t.completed);
-              const routine = routines.find(r => r.name === routineName);
+              const routine = routines.find(r => r.name === routineName && r.active);
+              
+              // Only show if routine is still active
+              if (!routine) return null;
               
               return (
                 <div key={routineName} className={`border rounded-lg p-4 ${
@@ -299,7 +328,6 @@ export function RoutineTaskIntegration({
                           size="sm"
                           className="p-0 h-6 w-6 mt-1"
                           onClick={() => handleCompleteTask(task.id)}
-                          disabled={task.completed}
                         >
                           {task.completed ? (
                             <CheckCircle2 className="h-5 w-5 text-green-500" />

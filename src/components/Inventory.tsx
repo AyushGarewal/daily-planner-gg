@@ -7,6 +7,7 @@ import { Backpack, Zap, Shield, Star, Gift, Clock, CheckCircle } from 'lucide-re
 import { PowerUp, DailyUsage } from '../types/achievements';
 import { AutoCompleteSelector } from './AutoCompleteSelector';
 import { Task } from '../types/task';
+import { useXPMultiplier } from '../hooks/useXPMultiplier';
 
 interface InventoryItem {
   id: string;
@@ -29,6 +30,7 @@ interface InventoryProps {
   onUseStreakShield: () => void;
   onUseXPBoost: (amount: number) => void;
   onAutoCompleteTask: (taskId: string) => void;
+  onRemoveBonusXP: () => void;
 }
 
 export function Inventory({ 
@@ -40,18 +42,20 @@ export function Inventory({
   onUsePowerUp, 
   onUseStreakShield,
   onUseXPBoost,
-  onAutoCompleteTask
+  onAutoCompleteTask,
+  onRemoveBonusXP
 }: InventoryProps) {
   const [showAutoCompleteSelector, setShowAutoCompleteSelector] = useState(false);
+  const { activateMultiplier } = useXPMultiplier();
   
   // Convert data to inventory items
   const inventoryItems: InventoryItem[] = [
     ...(bonusXP > 0 ? [{
       id: 'bonus-xp',
-      title: 'Bonus XP',
-      description: `Instantly add ${bonusXP} XP to your progress`,
-      icon: '⭐',
-      type: 'xp-boost' as const,
+      title: 'XP Multiplier',
+      description: `Apply 1.5x XP multiplier to your next task completion`,
+      icon: '⚡',
+      type: 'xp-multiplier' as const,
       quantity: 1,
       value: bonusXP
     }] : []),
@@ -88,10 +92,11 @@ export function Inventory({
     }
 
     switch (item.type) {
-      case 'xp-boost':
-        if (item.value) {
-          onUseXPBoost(item.value);
-        }
+      case 'xp-multiplier':
+        // Activate 1.5x multiplier for 1 hour
+        activateMultiplier(1.5, 1);
+        // Remove the bonus XP item from inventory
+        onRemoveBonusXP();
         break;
       case 'streak-shield':
         onUseStreakShield();
@@ -209,6 +214,12 @@ export function Inventory({
                     {item.dailyLimited && (
                       <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                         ⏰ Limited to once per day
+                      </div>
+                    )}
+                    
+                    {item.type === 'xp-multiplier' && (
+                      <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                        🎯 Single use item - disappears after use
                       </div>
                     )}
                     

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -46,7 +47,7 @@ export function useTasks() {
   const [showLevelUp, setShowLevelUp] = useState<number | null>(null);
   
   const { applyMultiplier } = useXPMultiplier();
-  const { checkAndGenerateRecurringHabits, updateFutureHabitInstances } = useHabitRecurrence();
+  const { checkAndGenerateRecurringHabits, updateFutureHabitInstances, deleteRecurringInstances } = useHabitRecurrence();
 
   // Generate recurring habits when tasks change or on app load
   useEffect(() => {
@@ -148,6 +149,19 @@ export function useTasks() {
       const updatedTask = updatedTasks.find(task => task.id === id);
       if (updatedTask && updatedTask.type === 'habit' && !updatedTask.isRecurringInstance) {
         console.log('Updating base habit, will sync future instances');
+        
+        // If recurrence changed, we need to delete old instances and generate new ones
+        const originalTask = prev.find(task => task.id === id);
+        if (originalTask && originalTask.recurrence !== updatedTask.recurrence) {
+          console.log('Recurrence changed, regenerating instances');
+          
+          // Delete existing future instances
+          const tasksWithoutOldInstances = deleteRecurringInstances(updatedTask.id, updatedTasks);
+          
+          // Generate new instances based on new recurrence
+          return checkAndGenerateRecurringHabits(tasksWithoutOldInstances);
+        }
+        
         return updateFutureHabitInstances(updatedTask, updatedTasks);
       }
       
@@ -177,12 +191,14 @@ export function useTasks() {
     setTasks(prev => {
       const updatedTasks = prev.map(task => {
         if (task.id === id) {
+          // Toggle completion state
+          const newCompleted = !task.completed;
           const isHabit = task.type === 'habit';
           const isRoutine = task.isRoutine;
           let xpReward = task.xpValue || 10;
           let shouldCountForStreak = true;
           
-          console.log(`Completing task: ${task.title}`);
+          console.log(`${newCompleted ? 'Completing' : 'Uncompleting'} task: ${task.title}`);
           console.log(`Is routine: ${isRoutine}, Base XP: ${xpReward}`);
           
           // Calculate XP and streak based on subtask completion
@@ -205,41 +221,60 @@ export function useTasks() {
           // Apply XP multiplier
           const finalXP = applyMultiplier(xpReward);
           
-          // Add XP transaction for undo functionality
-          addXPTransaction(
-            isHabit ? 'habit' : 'task',
-            task.id,
-            task.title,
-            finalXP
-          );
-          
-          console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}, Should count for streak: ${shouldCountForStreak}`);
-          
-          // Update progress stats - ALWAYS count routine tasks for XP and completion
-          setProgress(p => {
-            const newProgress = {
+          if (newCompleted) {
+            // Add XP transaction for undo functionality
+            addXPTransaction(
+              isHabit ? 'habit' : 'task',
+              task.id,
+              task.title,
+              finalXP
+            );
+            
+            console.log(`Final XP for ${task.title}: ${finalXP}, Is Routine: ${isRoutine}, Should count for streak: ${shouldCountForStreak}`);
+            
+            // Update progress stats - ALWAYS count routine tasks for XP and completion
+            setProgress(p => {
+              const newProgress = {
+                ...p,
+                totalXP: p.totalXP + finalXP,
+                tasksCompleted: p.tasksCompleted + 1,
+                habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
+              };
+              
+              // Only update streak if task qualifies for streak counting
+              if (shouldCountForStreak) {
+                newProgress.currentStreak = p.currentStreak + 1;
+                newProgress.longestStreak = (p.currentStreak + 1) > p.longestStreak 
+                  ? p.currentStreak + 1 
+                  : p.longestStreak;
+                newProgress.maxStreak = (p.currentStreak + 1) > p.maxStreak 
+                  ? p.currentStreak + 1 
+                  : p.maxStreak;
+              }
+              
+              console.log(`Progress updated:`, newProgress);
+              return newProgress;
+            });
+          } else {
+            // Uncompleting - reverse the XP and progress
+            console.log(`Reversing XP for ${task.title}: -${finalXP}`);
+            
+            setProgress(p => ({
               ...p,
-              totalXP: p.totalXP + finalXP,
-              tasksCompleted: p.tasksCompleted + 1,
-              habitsCompleted: isHabit ? p.habitsCompleted + 1 : p.habitsCompleted,
-            };
-            
-            // Only update streak if task qualifies for streak counting
-            if (shouldCountForStreak) {
-              newProgress.currentStreak = p.currentStreak + 1;
-              newProgress.longestStreak = (p.currentStreak + 1) > p.longestStreak 
-                ? p.currentStreak + 1 
-                : p.longestStreak;
-              newProgress.maxStreak = (p.currentStreak + 1) > p.maxStreak 
-                ? p.currentStreak + 1 
-                : p.maxStreak;
-            }
-            
-            console.log(`Progress updated:`, newProgress);
-            return newProgress;
-          });
+              totalXP: Math.max(0, p.totalXP - finalXP),
+              tasksCompleted: Math.max(0, p.tasksCompleted - 1),
+              habitsCompleted: isHabit ? Math.max(0, p.habitsCompleted - 1) : p.habitsCompleted,
+              currentStreak: shouldCountForStreak ? Math.max(0, p.currentStreak - 1) : p.currentStreak,
+              longestStreak: p.longestStreak, // Don't reduce longest streak
+              maxStreak: p.maxStreak // Don't reduce max streak
+            }));
+          }
           
-          return { ...task, completed: true, completedAt: new Date() };
+          return { 
+            ...task, 
+            completed: newCompleted, 
+            completedAt: newCompleted ? new Date() : undefined 
+          };
         }
         return task;
       });
@@ -322,10 +357,12 @@ export function useTasks() {
 
   const getTodaysTasks = (): Task[] => {
     const today = new Date().toDateString();
+    
+    // Filter out routine tasks from the main task list
     return tasks.filter(task => {
       if (task.dueDate) {
         const dueDate = new Date(task.dueDate).toDateString();
-        return dueDate === today;
+        return dueDate === today && !task.isRoutine; // Exclude routine tasks
       }
       return false;
     });

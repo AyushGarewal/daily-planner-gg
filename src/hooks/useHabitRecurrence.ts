@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Task } from '../types/task';
-import { addDays, startOfWeek, getDay, isSameDay, isAfter, isBefore } from 'date-fns';
+import { addDays, startOfWeek, getDay, isSameDay, isAfter, isBefore, startOfDay } from 'date-fns';
 
 export function useHabitRecurrence() {
   // Generate recurring habit instances for a given date range
@@ -111,6 +110,25 @@ export function useHabitRecurrence() {
     };
   };
 
+  // Delete recurring instances for a base habit
+  const deleteRecurringInstances = (baseHabitId: string, allTasks: Task[]): Task[] => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
+    
+    console.log(`Deleting future recurring instances for habit: ${baseHabitId}`);
+    
+    return allTasks.filter(task => {
+      // Keep tasks that are not recurring instances of this habit
+      if (task.parentHabitId !== baseHabitId || !task.isRecurringInstance) {
+        return true;
+      }
+      
+      // Keep past instances (already completed or before today)
+      const taskDate = startOfDay(new Date(task.dueDate));
+      return isBefore(taskDate, now);
+    });
+  };
+
   // Update all future recurring instances when a base habit is edited
   const updateFutureHabitInstances = (updatedBaseHabit: Task, allTasks: Task[]): Task[] => {
     console.log(`Updating future instances for habit: ${updatedBaseHabit.title}`);
@@ -168,6 +186,7 @@ export function useHabitRecurrence() {
     generateRecurringHabits,
     updateFutureHabitInstances,
     checkAndGenerateRecurringHabits,
-    createHabitInstance
+    createHabitInstance,
+    deleteRecurringInstances
   };
 }

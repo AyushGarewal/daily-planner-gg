@@ -11,6 +11,7 @@ import { Plus, Trash2, Calendar, Star, Undo2 } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
+import { useXPMultiplier } from '../hooks/useXPMultiplier';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
@@ -29,7 +30,8 @@ export function SideHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP, progress, setProgress } = useTasks();
+  const { progress, setProgress } = useTasks();
+  const { applyMultiplier } = useXPMultiplier();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
@@ -132,30 +134,32 @@ export function SideHabitsPanel() {
           xpToAdd = Math.round((habit.xpValue || 0) * completionPercentage);
         }
         
-        if (xpToAdd > 0) {
+        // Apply XP multiplier
+        const finalXP = applyMultiplier(xpToAdd);
+        
+        if (finalXP > 0) {
           if (wasCompleted) {
             // Undo completion - subtract XP
-            console.log(`Undoing side habit completion - removing ${xpToAdd} XP for: ${habit.name}`);
-            addBonusXP(-xpToAdd);
+            console.log(`Undoing side habit completion - removing ${finalXP} XP for: ${habit.name}`);
             
+            // Update progress immediately
             setProgress(prevProgress => ({
               ...prevProgress,
-              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
-              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
+              totalXP: Math.max(0, prevProgress.totalXP - finalXP),
+              level: Math.floor(Math.max(0, prevProgress.totalXP - finalXP) / 100) + 1
             }));
           } else {
             // Complete habit - add XP
-            console.log(`Adding ${xpToAdd} XP for completing side habit: ${habit.name}`);
+            console.log(`Adding ${finalXP} XP for completing side habit: ${habit.name}`);
             
             // Add XP transaction for undo functionality
-            addXPTransaction('side-habit', habit.id, habit.name, xpToAdd);
+            addXPTransaction('side-habit', habit.id, habit.name, finalXP);
             
-            addBonusXP(xpToAdd);
-            
+            // Update progress immediately
             setProgress(prevProgress => ({
               ...prevProgress,
-              totalXP: prevProgress.totalXP + xpToAdd,
-              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+              totalXP: prevProgress.totalXP + finalXP,
+              level: Math.floor((prevProgress.totalXP + finalXP) / 100) + 1
             }));
           }
         }
