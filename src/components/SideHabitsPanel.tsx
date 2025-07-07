@@ -11,7 +11,6 @@ import { Plus, Trash2, Calendar, Star, Undo2 } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
 import { useTasks } from '../hooks/useTasks';
-import { useXPMultiplier } from '../hooks/useXPMultiplier';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
@@ -31,7 +30,6 @@ export function SideHabitsPanel() {
   
   const { categories: customCategories } = useCustomCategories();
   const { progress, setProgress } = useTasks();
-  const { applyMultiplier } = useXPMultiplier();
   const today = new Date().toDateString();
 
   // Combine default and custom categories
@@ -114,6 +112,7 @@ export function SideHabitsPanel() {
     console.log('Form reset and closed');
   };
 
+  // FIXED: Side habit XP should update immediately and match displayed amount
   const toggleHabitCompletion = (habitId: string) => {
     setSideHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
@@ -134,8 +133,8 @@ export function SideHabitsPanel() {
           xpToAdd = Math.round((habit.xpValue || 0) * completionPercentage);
         }
         
-        // Apply XP multiplier
-        const finalXP = applyMultiplier(xpToAdd);
+        // FIXED: No multiplier for side habits, exact XP amount
+        const finalXP = xpToAdd;
         
         if (finalXP > 0) {
           if (wasCompleted) {
@@ -150,7 +149,7 @@ export function SideHabitsPanel() {
             }));
           } else {
             // Complete habit - add XP
-            console.log(`Adding ${finalXP} XP for completing side habit: ${habit.name}`);
+            console.log(`Adding exactly ${finalXP} XP for completing side habit: ${habit.name}`);
             
             // Add XP transaction for undo functionality
             addXPTransaction('side-habit', habit.id, habit.name, finalXP);
