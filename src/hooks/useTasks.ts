@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Task, TaskType, Subtask } from '../types/task';
 import { useLocalStorage } from './useLocalStorage';
@@ -451,6 +450,10 @@ export function useTasks() {
     });
   };
 
+  const removeBonusXP = () => {
+    setBonusXP(0);
+  };
+
   return {
     tasks,
     progress,
@@ -463,6 +466,7 @@ export function useTasks() {
     completeTask,
     toggleSubtask,
     addBonusXP,
+    removeBonusXP,
     canUseDaily,
     markDailyUsed,
     setShowLevelUp,
