@@ -26,8 +26,15 @@ export function EnhancedHabitPerformanceCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedHabit, setSelectedHabit] = useState<string>('all');
 
-  // Get habits only
-  const habits = tasks.filter(task => task.type === 'habit');
+  // Get unique habits only (deduplicate recurring instances)
+  const habits = tasks.filter(task => task.type === 'habit')
+    .reduce((acc, task) => {
+      const existing = acc.find(h => h.title === task.title && h.category === task.category && h.recurrence === task.recurrence);
+      if (!existing) {
+        acc.push(task);
+      }
+      return acc;
+    }, [] as any[]);
 
   // Generate calendar data
   const monthStart = startOfMonth(currentDate);

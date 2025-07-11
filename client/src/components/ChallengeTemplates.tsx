@@ -115,7 +115,14 @@ function CustomChallengeForm({ template, onClose, onSubmit }: CustomChallengeFor
   const [selectedHabits, setSelectedHabits] = useState<string[]>([]);
   const [deadline, setDeadline] = useState<string>('');
 
-  const availableHabits = tasks.filter(task => task.type === 'habit');
+  const availableHabits = tasks.filter(task => task.type === 'habit')
+    .reduce((acc, task) => {
+      const existing = acc.find(h => h.title === task.title && h.category === task.category && h.recurrence === task.recurrence);
+      if (!existing) {
+        acc.push(task);
+      }
+      return acc;
+    }, [] as any[]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -336,27 +336,38 @@ export function useChallengeSystem() {
   const completedChallenges = challenges.filter(c => c.isCompleted);
   const failedChallenges = challenges.filter(c => c.isFailed);
 
-  // Get available habits for linking
+  // Get available habits for linking (deduplicated)
   const getAvailableHabits = useCallback(() => {
-    const normalHabits = tasks.filter(t => t.type === 'habit').map(t => ({
-      id: t.id,
-      name: t.title,
-      type: 'normal' as HabitType
-    }));
+    // Deduplicate normal habits by title, category, and recurrence
+    const uniqueNormalHabits = tasks.filter(t => t.type === 'habit')
+      .reduce((acc, task) => {
+        const existing = acc.find(h => h.title === task.title && h.category === task.category && h.recurrence === task.recurrence);
+        if (!existing) {
+          acc.push(task);
+        }
+        return acc;
+      }, [] as any[])
+      .map(t => ({
+        id: t.id,
+        name: t.title,
+        type: 'normal' as HabitType
+      }));
     
+    // Side habits are already unique by ID
     const sideHabitsList = sideHabits.map((h: any) => ({
       id: h.id,
       name: h.name,
       type: 'side' as HabitType
     }));
     
+    // Negative habits are already unique by ID
     const negativeHabitsList = negativeHabits.map((h: any) => ({
       id: h.id,
       name: h.name,
       type: 'negative' as HabitType
     }));
 
-    return [...normalHabits, ...sideHabitsList, ...negativeHabitsList];
+    return [...uniqueNormalHabits, ...sideHabitsList, ...negativeHabitsList];
   }, [tasks, sideHabits, negativeHabits]);
 
   return {
