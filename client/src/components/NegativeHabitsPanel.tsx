@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, Shield, Calendar, Undo2 } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
-import { useTasks } from '../hooks/useTasks';
+import { useXPSystem } from '../hooks/useXPSystem';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { NegativeHabit, NegativeHabitSubtask } from '../types/sideHabits';
@@ -29,8 +29,12 @@ export function NegativeHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<NegativeHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { addBonusXP, progress, setProgress } = useTasks();
+  const { awardXP, undoXP } = useXPSystem();
   const today = new Date().toDateString();
+  
+  // Track XP transaction IDs for undo functionality
+  const [avoidanceTransactionIds, setAvoidanceTransactionIds] = useLocalStorage<{[habitId: string]: string}>('negative-habit-avoidance-transactions', {});
+  const [failureTransactionIds, setFailureTransactionIds] = useLocalStorage<{[habitId: string]: string}>('negative-habit-failure-transactions', {});
 
   // Combine default and custom categories
   const allCategories = [...CATEGORIES, ...customCategories];
@@ -110,24 +114,26 @@ export function NegativeHabitsPanel() {
         
         if (xpToAdd > 0) {
           if (wasAvoided) {
-            // Undo avoidance - subtract XP
-            console.log(`Undoing negative habit avoidance - removing ${xpToAdd} XP for: ${habit.name}`);
-            addBonusXP(-xpToAdd);
-            
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: Math.max(0, prevProgress.totalXP - xpToAdd),
-              level: Math.floor(Math.max(0, prevProgress.totalXP - xpToAdd) / 100) + 1
-            }));
+            // Undo avoidance - use the XP system to reverse the transaction
+            const transactionId = avoidanceTransactionIds[habitId];
+            if (transactionId) {
+              console.log(`Undoing negative habit avoidance - removing ${xpToAdd} XP for: ${habit.name}`);
+              undoXP(transactionId);
+              // Remove the transaction ID
+              setAvoidanceTransactionIds(prev => {
+                const updated = { ...prev };
+                delete updated[habitId];
+                return updated;
+              });
+            }
           } else {
-            // Mark as avoided - add XP
+            // Mark as avoided - use the XP system to award XP
             console.log(`Adding ${xpToAdd} XP for avoiding negative habit: ${habit.name}`);
-            addBonusXP(xpToAdd);
-            
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: prevProgress.totalXP + xpToAdd,
-              level: Math.floor((prevProgress.totalXP + xpToAdd) / 100) + 1
+            const transactionId = awardXP('negative-habit', habitId, xpToAdd, `Avoided negative habit: ${habit.name}`);
+            // Store the transaction ID for undo functionality
+            setAvoidanceTransactionIds(prev => ({
+              ...prev,
+              [habitId]: transactionId
             }));
           }
         }
@@ -153,24 +159,26 @@ export function NegativeHabitsPanel() {
         };
         
         if (hadFailed) {
-          // Undo failure - add back XP penalty
-          console.log(`Undoing negative habit failure - adding back ${habit.xpPenalty} XP for: ${habit.name}`);
-          addBonusXP(habit.xpPenalty);
-          
-          setProgress(prevProgress => ({
-            ...prevProgress,
-            totalXP: prevProgress.totalXP + habit.xpPenalty,
-            level: Math.floor((prevProgress.totalXP + habit.xpPenalty) / 100) + 1
-          }));
+          // Undo failure - use the XP system to reverse the penalty
+          const transactionId = failureTransactionIds[habitId];
+          if (transactionId) {
+            console.log(`Undoing negative habit failure - adding back ${habit.xpPenalty} XP for: ${habit.name}`);
+            undoXP(transactionId);
+            // Remove the transaction ID
+            setFailureTransactionIds(prev => {
+              const updated = { ...prev };
+              delete updated[habitId];
+              return updated;
+            });
+          }
         } else {
-          // Apply XP penalty for failure
+          // Apply XP penalty for failure - use the XP system with negative value
           console.log(`Removing ${habit.xpPenalty} XP for failing negative habit: ${habit.name}`);
-          addBonusXP(-habit.xpPenalty);
-          
-          setProgress(prevProgress => ({
-            ...prevProgress,
-            totalXP: Math.max(0, prevProgress.totalXP - habit.xpPenalty),
-            level: Math.floor(Math.max(0, prevProgress.totalXP - habit.xpPenalty) / 100) + 1
+          const transactionId = awardXP('negative-habit', habitId, -habit.xpPenalty, `Failed negative habit: ${habit.name}`);
+          // Store the transaction ID for undo functionality
+          setFailureTransactionIds(prev => ({
+            ...prev,
+            [habitId]: transactionId
           }));
         }
         

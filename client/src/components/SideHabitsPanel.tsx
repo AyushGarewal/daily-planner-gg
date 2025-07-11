@@ -10,13 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2, Calendar, Star, Undo2 } from 'lucide-react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useCustomCategories } from '../hooks/useCustomCategories';
-import { useTasks } from '../hooks/useTasks';
+import { useXPSystem } from '../hooks/useXPSystem';
 import { WeekdaySelector } from './WeekdaySelector';
 import { SubtaskManager } from './SubtaskManager';
 import { SideHabit, SideHabitSubtask } from '../types/sideHabits';
 import { CATEGORIES } from '../types/task';
 import { getDay } from 'date-fns';
-import { addXPTransaction } from './XPBar';
 
 export function SideHabitsPanel() {
   const [sideHabits, setSideHabits] = useLocalStorage<SideHabit[]>('sideHabits', []);
@@ -29,41 +28,16 @@ export function SideHabitsPanel() {
   const [newHabitSubtasks, setNewHabitSubtasks] = useState<SideHabitSubtask[]>([]);
   
   const { categories: customCategories } = useCustomCategories();
-  const { progress, setProgress } = useTasks();
+  const { awardXP, undoXP } = useXPSystem();
   const today = new Date().toDateString();
+  
+  // Track XP transaction IDs for undo functionality
+  const [xpTransactionIds, setXpTransactionIds] = useLocalStorage<{[habitId: string]: string}>('side-habit-xp-transactions', {});
 
   // Combine default and custom categories
   const allCategories = [...CATEGORIES, ...customCategories];
 
-  // Listen for undo events
-  useEffect(() => {
-    const handleXPUndo = (event: CustomEvent) => {
-      const { type, itemId, xpChange } = event.detail;
-      
-      if (type === 'side-habit') {
-        // Find and update the side habit
-        setSideHabits(prev => prev.map(habit => {
-          if (habit.id === itemId) {
-            return {
-              ...habit,
-              completedDates: habit.completedDates.filter(date => date !== today)
-            };
-          }
-          return habit;
-        }));
-        
-        // Reverse XP changes  
-        setProgress(prev => ({
-          ...prev,
-          totalXP: Math.max(0, prev.totalXP - xpChange),
-          level: Math.floor(Math.max(0, prev.totalXP - xpChange) / 100) + 1
-        }));
-      }
-    };
-
-    window.addEventListener('xp-undo', handleXPUndo as EventListener);
-    return () => window.removeEventListener('xp-undo', handleXPUndo as EventListener);
-  }, [setSideHabits, setProgress, today]);
+  // Clean up - removed old event listener that was causing state sync issues
 
   const addSideHabit = () => {
     console.log('Adding side habit:', { newHabitName, newHabitCategory });
@@ -112,7 +86,7 @@ export function SideHabitsPanel() {
     console.log('Form reset and closed');
   };
 
-  // FIXED: Side habit XP should update immediately and match displayed amount
+  // FIXED: Side habit XP should update immediately using the unified XP system
   const toggleHabitCompletion = (habitId: string) => {
     setSideHabits(prev => prev.map(habit => {
       if (habit.id === habitId) {
@@ -133,32 +107,28 @@ export function SideHabitsPanel() {
           xpToAdd = Math.round((habit.xpValue || 0) * completionPercentage);
         }
         
-        // FIXED: No multiplier for side habits, exact XP amount
-        const finalXP = xpToAdd;
-        
-        if (finalXP > 0) {
+        if (xpToAdd > 0) {
           if (wasCompleted) {
-            // Undo completion - subtract XP
-            console.log(`Undoing side habit completion - removing ${finalXP} XP for: ${habit.name}`);
-            
-            // Update progress immediately
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: Math.max(0, prevProgress.totalXP - finalXP),
-              level: Math.floor(Math.max(0, prevProgress.totalXP - finalXP) / 100) + 1
-            }));
+            // Undo completion - use the XP system to reverse the transaction
+            const transactionId = xpTransactionIds[habitId];
+            if (transactionId) {
+              console.log(`Undoing side habit completion - removing ${xpToAdd} XP for: ${habit.name}`);
+              undoXP(transactionId);
+              // Remove the transaction ID
+              setXpTransactionIds(prev => {
+                const updated = { ...prev };
+                delete updated[habitId];
+                return updated;
+              });
+            }
           } else {
-            // Complete habit - add XP
-            console.log(`Adding exactly ${finalXP} XP for completing side habit: ${habit.name}`);
-            
-            // Add XP transaction for undo functionality
-            addXPTransaction('side-habit', habit.id, habit.name, finalXP);
-            
-            // Update progress immediately
-            setProgress(prevProgress => ({
-              ...prevProgress,
-              totalXP: prevProgress.totalXP + finalXP,
-              level: Math.floor((prevProgress.totalXP + finalXP) / 100) + 1
+            // Complete habit - use the XP system to award XP
+            console.log(`Adding exactly ${xpToAdd} XP for completing side habit: ${habit.name}`);
+            const transactionId = awardXP('side-habit', habitId, xpToAdd, `Completed side habit: ${habit.name}`);
+            // Store the transaction ID for undo functionality
+            setXpTransactionIds(prev => ({
+              ...prev,
+              [habitId]: transactionId
             }));
           }
         }
