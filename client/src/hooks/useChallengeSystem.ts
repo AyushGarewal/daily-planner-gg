@@ -112,6 +112,8 @@ export function useChallengeSystem() {
   const retryChallenge = useCallback((challengeId: string) => {
     setChallenges(prev => prev.map(challenge => {
       if (challenge.id === challengeId && challenge.isFailed) {
+        const newStartDate = new Date();
+        const newEndDate = new Date(Date.now() + challenge.timeLimit * 24 * 60 * 60 * 1000);
         return {
           ...challenge,
           isFailed: false,
@@ -119,8 +121,8 @@ export function useChallengeSystem() {
           isActive: true,
           currentProgress: 0,
           dailyProgress: {},
-          startDate: new Date(),
-          endDate: new Date(Date.now() + challenge.timeLimit * 24 * 60 * 60 * 1000)
+          startDate: newStartDate,
+          endDate: newEndDate
         };
       }
       return challenge;
@@ -159,10 +161,10 @@ export function useChallengeSystem() {
   }, [tasks, sideHabits, negativeHabits]);
 
   // Calculate frequency count for a habit in a time period
-  const calculateHabitFrequency = useCallback((habitId: string, habitType: HabitType, startDate: Date, endDate: Date): number => {
+  const calculateHabitFrequency = useCallback((habitId: string, habitType: HabitType, startDate: Date | string, endDate: Date | string): number => {
     let count = 0;
-    const start = startDate.getTime();
-    const end = endDate.getTime();
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
 
     if (habitType === 'normal') {
       const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
@@ -194,9 +196,9 @@ export function useChallengeSystem() {
   }, [tasks, sideHabits, negativeHabits]);
 
   // Calculate daily completion percentage
-  const calculateDailyCompletionRate = useCallback((startDate: Date, endDate: Date): number => {
-    const start = startDate.getTime();
-    const end = endDate.getTime();
+  const calculateDailyCompletionRate = useCallback((startDate: Date | string, endDate: Date | string): number => {
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
     const today = new Date().toDateString();
     
     // Get today's completion rate from user progress
@@ -235,7 +237,8 @@ export function useChallengeSystem() {
       if (!challenge.isActive || challenge.isCompleted || challenge.isFailed) return;
 
       // Check if challenge has expired
-      if (challenge.endDate && new Date() > new Date(challenge.endDate)) {
+      const endDate = new Date(challenge.endDate);
+      if (challenge.endDate && new Date() > endDate) {
         if (challenge.currentProgress < challenge.targetValue) {
           failChallenge(challenge.id, 'Time limit exceeded');
         }
@@ -288,7 +291,7 @@ export function useChallengeSystem() {
               shouldFail = true;
             } else {
               // Count days successfully avoided
-              const daysPassed = Math.floor((Date.now() - challenge.startDate.getTime()) / (24 * 60 * 60 * 1000));
+              const daysPassed = Math.floor((Date.now() - new Date(challenge.startDate).getTime()) / (24 * 60 * 60 * 1000));
               newProgress = daysPassed;
             }
           }
@@ -302,10 +305,11 @@ export function useChallengeSystem() {
         case 'combo':
           // Count days where all habits were completed together
           let comboDays = 0;
-          const daysPassed = Math.floor((Date.now() - challenge.startDate.getTime()) / (24 * 60 * 60 * 1000));
+          const startDate = new Date(challenge.startDate);
+          const daysPassed = Math.floor((Date.now() - startDate.getTime()) / (24 * 60 * 60 * 1000));
           
           for (let i = 0; i <= daysPassed; i++) {
-            const checkDate = new Date(challenge.startDate.getTime() + i * 24 * 60 * 60 * 1000);
+            const checkDate = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
             if (checkComboCompletion(challenge.linkedHabits, challenge.habitTypes, checkDate)) {
               comboDays++;
             }
