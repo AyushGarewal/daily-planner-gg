@@ -340,14 +340,18 @@ export function useTasks() {
   };
 
   // Calculate today's completion percentage including partial subtask completion
+  // FIXED: Exclude surplus tasks from completion percentage calculation
   const getTodayCompletionPercentage = (): number => {
     const todaysTasks = getTodaysTasks();
     
-    if (todaysTasks.length === 0) return 100;
+    // Filter out surplus tasks - they don't count toward completion percentage
+    const nonSurplusTasks = todaysTasks.filter(task => task.taskType !== 'surplus');
+    
+    if (nonSurplusTasks.length === 0) return 100;
     
     let totalProgress = 0;
     
-    todaysTasks.forEach(task => {
+    nonSurplusTasks.forEach(task => {
       if (task.completed) {
         totalProgress += 1;
       } else if (task.subtasks && task.subtasks.length > 0) {
@@ -358,8 +362,8 @@ export function useTasks() {
       }
     });
     
-    const finalPercentage = Math.round((totalProgress / todaysTasks.length) * 100);
-    console.log(`Total completion: ${totalProgress}/${todaysTasks.length} = ${finalPercentage}%`);
+    const finalPercentage = Math.round((totalProgress / nonSurplusTasks.length) * 100);
+    console.log(`Total completion: ${totalProgress}/${nonSurplusTasks.length} = ${finalPercentage}% (excluded ${todaysTasks.length - nonSurplusTasks.length} surplus tasks)`);
     return finalPercentage;
   };
 
