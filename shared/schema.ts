@@ -31,15 +31,20 @@ export const challenges = pgTable("challenges", {
   userId: text("user_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
-  conditionType: text("condition_type").notNull(), // 'task_completion' | 'habit_streak' | 'xp_gain' | 'custom'
-  conditionTarget: integer("condition_target").notNull(),
-  conditionDuration: integer("condition_duration"), // days
+  challengeType: text("challenge_type").notNull(), // 'streak' | 'frequency' | 'milestone' | 'avoidance' | 'completion' | 'combo'
+  linkedHabits: text("linked_habits").array(), // habit IDs
+  habitTypes: text("habit_types").array(), // 'normal' | 'side' | 'negative'
+  targetValue: integer("target_value").notNull(),
+  currentProgress: integer("current_progress").default(0),
+  timeLimit: integer("time_limit"), // days
   xpReward: integer("xp_reward").default(0),
-  badgeName: text("badge_name"),
+  badgeReward: text("badge_reward"),
   startDate: date("start_date").notNull().defaultNow(),
   endDate: date("end_date"),
   isCompleted: boolean("is_completed").default(false),
-  progress: integer("progress").default(0),
+  isFailed: boolean("is_failed").default(false),
+  isActive: boolean("is_active").default(true),
+  dailyProgress: text("daily_progress"), // JSON string for daily tracking
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
 });
@@ -76,11 +81,13 @@ export const insertChallengeSchema = createInsertSchema(challenges).pick({
   userId: true,
   title: true,
   description: true,
-  conditionType: true,
-  conditionTarget: true,
-  conditionDuration: true,
+  challengeType: true,
+  linkedHabits: true,
+  habitTypes: true,
+  targetValue: true,
+  timeLimit: true,
   xpReward: true,
-  badgeName: true,
+  badgeReward: true,
   startDate: true,
   endDate: true,
 });

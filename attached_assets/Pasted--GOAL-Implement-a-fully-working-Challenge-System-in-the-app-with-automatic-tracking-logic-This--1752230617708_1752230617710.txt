@@ -1,0 +1,80 @@
+🛠️ GOAL: Implement a fully working Challenge System in the app with automatic tracking logic. This should include both the UI and the underlying logic. The system must work across all habit types (normal, side, and negative) and must not require any manual tracking by the user.
+
+---
+
+📌 FEATURES TO IMPLEMENT:
+
+1. Challenge Creation:
+- User can create a custom challenge from the Challenge page.
+- During creation, the user must choose:
+  a. Which habits are linked to the challenge (can be multiple).
+  b. What challenge type it is (choose from the 6 types below).
+  c. Optionally name the challenge and set a target value or due date if needed.
+
+2. Challenge Types and Logic:
+Each challenge should use different logic, tracked automatically:
+
+**a. Streak Challenge**
+→ Track if the user completes a habit X consecutive days.
+→ Automatically fails if the streak breaks.
+
+**b. Frequency Challenge**
+→ Complete a habit Y number of times before the end date.
+→ Example: Complete “Read Book” 12 times before July 31.
+
+**c. Milestone Challenge**
+→ Reach a numeric progress target (e.g., 500 total pushups).
+→ Tracked using numeric logging of linked habits.
+
+**d. Avoidance Challenge**
+→ Track if the user can continuously avoid a negative habit for Z days.
+→ If the user marks it “failed,” the challenge fails.
+
+**e. Completion % Challenge**
+→ User must maintain 80% daily task completion over a period.
+→ Tracked using daily completion percentage.
+
+**f. Combo Challenge**
+→ Track if multiple habits are completed on the same day (e.g., “Meditate” + “Workout” done together).
+
+Each challenge must track progress automatically and update in real-time on the Challenge UI panel.
+
+---
+
+🎯 Challenge Progress Tracking:
+- All progress must be updated **automatically** based on existing app data (habit completions, XP, etc.).
+- User should never have to manually mark challenge progress.
+- Show a live progress bar on each challenge card.
+- On completion, reward XP and/or a badge to the user.
+- Let users **retry failed challenges** if they want (no penalty).
+
+---
+
+📋 UI REQUIREMENTS:
+- Challenge Creation Panel should allow:
+  - Naming the challenge
+  - Selecting one or more habits
+  - Choosing challenge type
+  - Setting numeric targets, streak length, or date range
+- Challenge Overview Page should show:
+  - Live progress bars
+  - Status (Active, Completed, Failed)
+  - Reward earned (XP, badge)
+
+---
+
+💡 TECHNICAL NOTES:
+- Challenges should be stored in a dedicated `challenges` array/object in localStorage or backend.
+- Reuse existing tracking logic like `streak`, `numericTarget`, `habitLog`, and `habitCompletionData`.
+- Hook into existing habit completion logic to calculate challenge progress.
+- Use `useEffect` to update challenge progress reactively.
+
+---
+
+✅ Ensure:
+- All challenge types are auto-tracked.
+- UI is connected and reflects real-time changes.
+- No manual tracking needed by user.
+- The system works for all habit types: normal, side, and negative.
+- XP bar updates instantly when challenge is completed.
+- Existing habit or task logic must not be broken.

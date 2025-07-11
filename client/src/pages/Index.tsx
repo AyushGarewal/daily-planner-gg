@@ -53,6 +53,7 @@ import { HabitPerformanceTracker } from '../components/HabitPerformanceTracker';
 import { ChallengeManager } from '../components/ChallengeManager';
 import { EnhancedDailyReflectionForm } from '../components/EnhancedDailyReflectionForm';
 import { ChallengeTemplates } from '../components/ChallengeTemplates';
+import { ComprehensiveChallengeSystem } from '../components/ComprehensiveChallengeSystem';
 import { EnhancedHabitPerformanceCalendar } from '../components/EnhancedHabitPerformanceCalendar';
 import { useDataReset } from '../hooks/useDataReset';
 import { RoutineTaskIntegration } from '../components/RoutineTaskIntegration';
@@ -549,20 +550,7 @@ const Index = () => {
 
             {activeTab === 'challenges' && (
               <div className="animate-fade-in">
-                <Tabs defaultValue="templates" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="templates">Challenge Templates</TabsTrigger>
-                    <TabsTrigger value="manager">Challenge Manager</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="templates">
-                    <ChallengeTemplates />
-                  </TabsContent>
-                  
-                  <TabsContent value="manager">
-                    <ChallengeManager />
-                  </TabsContent>
-                </Tabs>
+                <ComprehensiveChallengeSystem />
               </div>
             )}
 
