@@ -7,6 +7,17 @@ This is a comprehensive full-stack task management and productivity application 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (July 11, 2025)
+
+### Migration from Lovable to Replit Completed
+- ✅ Migrated from React Router to wouter for routing
+- ✅ Replaced Supabase with PostgreSQL and Drizzle ORM
+- ✅ Created server-side API endpoints for database operations
+- ✅ Updated client hooks to use new API endpoints instead of direct Supabase calls
+- ✅ Implemented proper client/server separation
+- ✅ Fixed habit auto-generation to start from next day (prevents duplicate habits)
+- ✅ All dependencies installed and project running successfully
+
 ## System Architecture
 
 ### Frontend Architecture

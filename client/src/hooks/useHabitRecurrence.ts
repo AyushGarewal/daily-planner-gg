@@ -21,8 +21,10 @@ export function useHabitRecurrence() {
     const instances: Task[] = [];
     const habitCreationDate = new Date(baseHabit.dueDate);
     
-    // Don't generate instances before the habit was created
-    const generationStart = isAfter(startDate, habitCreationDate) ? startDate : habitCreationDate;
+    // For newly created habits, start generation from the next day to prevent duplicates
+    // This ensures we don't create an instance for today when the habit was just created
+    const nextDay = addDays(habitCreationDate, 1);
+    const generationStart = isAfter(startDate, nextDay) ? startDate : nextDay;
     
     console.log(`Generating instances for habit: ${baseHabit.title}, recurrence: ${baseHabit.recurrence}`);
     
