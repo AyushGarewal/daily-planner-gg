@@ -1,6 +1,6 @@
 
 import { useLocalStorage } from './useLocalStorage';
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/lib/queryClient';
 import { useState, useEffect } from 'react';
 
 export interface CustomCategory {
@@ -28,25 +28,20 @@ export function useCustomCategories() {
 
   const loadCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('custom_categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
+      const data = await apiRequest('/api/categories');
       
-      // Transform Supabase data to match our interface
-      const transformedData: CustomCategory[] = (data || []).map((item: SupabaseCustomCategory) => ({
+      // Transform API data to match our interface
+      const transformedData: CustomCategory[] = (data || []).map((item: any) => ({
         id: item.id,
         name: item.name,
         type: item.type as 'task' | 'habit' | 'project' | 'goal',
-        created_at: new Date(item.created_at)
+        created_at: new Date(item.createdAt)
       }));
       
       setCategories(transformedData);
     } catch (error) {
       console.error('Error loading categories:', error);
-      // Fallback to localStorage if Supabase fails
+      // Fallback to localStorage if API fails
       const localCategories = JSON.parse(localStorage.getItem('customCategories') || '[]');
       setCategories(localCategories);
     } finally {
@@ -56,20 +51,17 @@ export function useCustomCategories() {
 
   const addCategory = async (name: string, type: 'task' | 'habit' | 'project' | 'goal') => {
     try {
-      const { data, error } = await supabase
-        .from('custom_categories')
-        .insert([{ name, type }])
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await apiRequest('/api/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name, type }),
+      });
       
       // Transform the response data
       const transformedData: CustomCategory = {
         id: data.id,
         name: data.name,
         type: data.type as 'task' | 'habit' | 'project' | 'goal',
-        created_at: new Date(data.created_at)
+        created_at: new Date(data.createdAt)
       };
       
       setCategories(prev => [...prev, transformedData]);

@@ -1,21 +1,15 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/lib/queryClient';
 
 export function useDataReset() {
   const resetAllData = async () => {
     try {
-      // Reset Supabase data if authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { error } = await supabase.rpc('reset_user_data', {
-          target_user_id: user.id
-        });
-        
-        if (error) {
-          console.error('Error resetting Supabase data:', error);
-        }
-      }
+      // Reset database data
+      const userId = 'default-user'; // For now, using a default user ID
+      await apiRequest('/api/reset-data', {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      });
     } catch (error) {
       console.error('Error resetting remote data:', error);
     }
