@@ -140,8 +140,13 @@ export function useChallengeSystem() {
       let isCompleted = false;
 
       if (habitType === 'normal') {
-        const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
-        isCompleted = habit?.completedDates?.includes(dateString) || false;
+        // For normal habits, check if task is completed on the specific date
+        const habitTask = tasks.find(t => 
+          t.id === habitId && 
+          t.type === 'habit' && 
+          new Date(t.dueDate).toDateString() === dateString
+        );
+        isCompleted = habitTask?.completed || false;
       } else if (habitType === 'side') {
         const habit = sideHabits.find((h: any) => h.id === habitId);
         isCompleted = habit?.completedDates?.includes(dateString) || false;
@@ -167,13 +172,13 @@ export function useChallengeSystem() {
     const end = new Date(endDate).getTime();
 
     if (habitType === 'normal') {
-      const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
-      if (habit?.completedDates) {
-        count = habit.completedDates.filter(dateStr => {
-          const date = new Date(dateStr).getTime();
-          return date >= start && date <= end;
-        }).length;
-      }
+      // For normal habits, count completed task instances in the date range
+      const completedTasks = tasks.filter(t => {
+        if (t.id !== habitId || t.type !== 'habit' || !t.completed) return false;
+        const taskDate = new Date(t.dueDate).getTime();
+        return taskDate >= start && taskDate <= end;
+      });
+      count = completedTasks.length;
     } else if (habitType === 'side') {
       const habit = sideHabits.find((h: any) => h.id === habitId);
       if (habit?.completedDates) {
@@ -217,8 +222,13 @@ export function useChallengeSystem() {
       const habitType = habitTypes[index];
       
       if (habitType === 'normal') {
-        const habit = tasks.find(t => t.id === habitId && t.type === 'habit');
-        return habit?.completedDates?.includes(dateString) || false;
+        // Check if any habit task with this ID was completed on this date
+        const habitTask = tasks.find(t => 
+          t.id === habitId && 
+          t.type === 'habit' && 
+          new Date(t.dueDate).toDateString() === dateString
+        );
+        return habitTask?.completed || false;
       } else if (habitType === 'side') {
         const habit = sideHabits.find((h: any) => h.id === habitId);
         return habit?.completedDates?.includes(dateString) || false;
@@ -233,13 +243,17 @@ export function useChallengeSystem() {
 
   // Main challenge tracking logic
   const updateAllChallenges = useCallback(() => {
+    console.log('Updating all challenges...');
     challenges.forEach(challenge => {
       if (!challenge.isActive || challenge.isCompleted || challenge.isFailed) return;
+
+      console.log(`Checking challenge: ${challenge.title} - Type: ${challenge.challengeType} - Linked habits: ${challenge.linkedHabits.join(', ')}`);
 
       // Check if challenge has expired
       const endDate = new Date(challenge.endDate);
       if (challenge.endDate && new Date() > endDate) {
         if (challenge.currentProgress < challenge.targetValue) {
+          console.log(`Challenge expired: ${challenge.title}`);
           failChallenge(challenge.id, 'Time limit exceeded');
         }
         return;
@@ -252,19 +266,27 @@ export function useChallengeSystem() {
         case 'streak':
           // Find the minimum streak among linked habits
           if (challenge.linkedHabits.length > 0) {
-            const streaks = challenge.linkedHabits.map((habitId, index) => 
-              calculateHabitStreak(habitId, challenge.habitTypes[index])
-            );
+            const streaks = challenge.linkedHabits.map((habitId, index) => {
+              const streak = calculateHabitStreak(habitId, challenge.habitTypes[index]);
+              const habitDetails = tasks.find(t => t.id === habitId);
+              console.log(`Habit ${habitId} "${habitDetails?.title || 'Unknown'}" (${challenge.habitTypes[index]}) streak: ${streak}`);
+              return streak;
+            });
             newProgress = Math.min(...streaks);
+            console.log(`Streak challenge ${challenge.title}: min streak = ${newProgress}`);
           }
           break;
 
         case 'frequency':
           // Sum up frequency counts for all linked habits
           if (challenge.linkedHabits.length > 0) {
-            newProgress = challenge.linkedHabits.reduce((total, habitId, index) => 
-              total + calculateHabitFrequency(habitId, challenge.habitTypes[index], challenge.startDate, challenge.endDate)
-            , 0);
+            newProgress = challenge.linkedHabits.reduce((total, habitId, index) => {
+              const freq = calculateHabitFrequency(habitId, challenge.habitTypes[index], challenge.startDate, challenge.endDate);
+              const habitDetails = tasks.find(t => t.id === habitId);
+              console.log(`Habit ${habitId} "${habitDetails?.title || 'Unknown'}" (${challenge.habitTypes[index]}) frequency: ${freq}`);
+              return total + freq;
+            }, 0);
+            console.log(`Frequency challenge ${challenge.title}: total frequency = ${newProgress}`);
           }
           break;
 
@@ -318,9 +340,13 @@ export function useChallengeSystem() {
           break;
       }
 
+      console.log(`Challenge ${challenge.title}: progress ${challenge.currentProgress} -> ${newProgress} (target: ${challenge.targetValue})`);
+
       if (shouldFail) {
+        console.log(`Challenge ${challenge.title} failed!`);
         failChallenge(challenge.id, 'Avoidance challenge failed');
       } else if (newProgress !== challenge.currentProgress) {
+        console.log(`Updating challenge ${challenge.title} progress from ${challenge.currentProgress} to ${newProgress}`);
         updateChallengeProgress(challenge.id, newProgress);
       }
     });
@@ -328,8 +354,9 @@ export function useChallengeSystem() {
 
   // Update challenges when relevant data changes
   useEffect(() => {
+    console.log('Challenge system triggered by data change');
     updateAllChallenges();
-  }, [tasks, sideHabits, negativeHabits, userProgress]);
+  }, [updateAllChallenges]);
 
   // Get active challenges
   const activeChallenges = challenges.filter(c => c.isActive && !c.isCompleted && !c.isFailed);
